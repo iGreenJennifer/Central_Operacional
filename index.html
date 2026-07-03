@@ -1,0 +1,2290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central iGreen · Cobrança & Qualidade</title>
+<script>
+/* Carrega a biblioteca de Excel COM suporte a estilos (cores); se falhar, usa a versão padrão */
+(function(){
+  const fontes = [
+    'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
+    'https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+  ];
+  (function carrega(i){
+    if(i>=fontes.length) return;
+    const s=document.createElement('script');
+    s.src=fontes[i];
+    s.onerror=()=>carrega(i+1);
+    document.head.appendChild(s);
+  })(0);
+})();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --verde:#2DBD6E; --verde-claro:#4ee98f; --verde-escuro:#178a4b;
+  --bg:#070d09; --bg2:#0c130e; --card:#101a13; --card2:#15221a;
+  --borda:#1e3326; --texto:#e8f5ec; --texto2:#8fb59d; --texto3:#5a7d67;
+  --amarelo:#f5c542; --vermelho:#ff5c5c; --azul:#4aa8ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--texto);min-height:100vh;overflow-x:hidden}
+
+/* ===== fundo animado: grade + orbs ===== */
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(45,189,110,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(45,189,110,.05) 1px,transparent 1px);
+  background-size:44px 44px;animation:gridMove 24s linear infinite}
+@keyframes gridMove{to{background-position:44px 44px}}
+.orb{position:fixed;border-radius:50%;filter:blur(90px);opacity:.16;z-index:0;pointer-events:none;animation:flutua 14s ease-in-out infinite alternate}
+.orb1{width:420px;height:420px;background:var(--verde);top:-120px;right:-80px}
+.orb2{width:340px;height:340px;background:var(--verde-escuro);bottom:-100px;left:200px;animation-delay:-6s}
+@keyframes flutua{to{transform:translateY(50px) translateX(-30px)}}
+@media (prefers-reduced-motion:reduce){.bg-grid,.orb{animation:none}}
+
+/* ===== layout ===== */
+.app{display:flex;min-height:100vh;position:relative;z-index:1}
+.sidebar{width:240px;min-width:240px;background:rgba(10,16,12,.92);border-right:1px solid var(--borda);padding:22px 14px;display:flex;flex-direction:column;gap:6px;backdrop-filter:blur(6px)}
+.logo{display:flex;align-items:center;gap:10px;padding:6px 10px 20px;border-bottom:1px solid var(--borda);margin-bottom:14px}
+.logo-icone{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--verde),var(--verde-escuro));display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 0 18px rgba(45,189,110,.45)}
+.logo-txt b{display:block;font-size:15px;letter-spacing:.4px}
+.logo-txt span{font-size:10.5px;color:var(--texto2);letter-spacing:1.4px;text-transform:uppercase}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid transparent;border-radius:10px;background:none;color:var(--texto2);font-size:13.5px;cursor:pointer;text-align:left;width:100%;transition:.18s}
+.nav-btn:hover{background:var(--card);color:var(--texto)}
+.nav-btn.ativo{background:linear-gradient(90deg,rgba(45,189,110,.16),transparent);border-color:rgba(45,189,110,.35);color:var(--verde-claro)}
+.nav-sec{font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--texto3);padding:14px 12px 4px}
+.sidebar .credito{margin-top:auto;font-size:10px;color:var(--texto3);padding:14px 10px 0;border-top:1px solid var(--borda);line-height:1.6}
+
+.main{flex:1;padding:30px 36px;max-width:1250px}
+.pagina{display:none;animation:surge .28s ease}
+.pagina.ativa{display:block}
+@keyframes surge{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+h1{font-size:22px;margin-bottom:4px}
+h1 .tag{font-size:11px;background:rgba(45,189,110,.15);border:1px solid rgba(45,189,110,.4);color:var(--verde-claro);padding:3px 10px;border-radius:20px;vertical-align:middle;margin-left:10px;letter-spacing:.6px}
+.sub{color:var(--texto2);font-size:13px;margin-bottom:24px;max-width:760px;line-height:1.55}
+
+/* ===== cards / dropzones ===== */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:18px}
+.card h3{font-size:13.5px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card .dica{font-size:11.5px;color:var(--texto2);margin-bottom:12px;line-height:1.5}
+.opcional{font-size:10px;color:var(--texto3);border:1px solid var(--borda);padding:2px 8px;border-radius:10px}
+.drop{border:1.5px dashed var(--borda);border-radius:10px;padding:18px 14px;text-align:center;cursor:pointer;transition:.18s;font-size:12.5px;color:var(--texto2)}
+.drop:hover,.drop.over{border-color:var(--verde);background:rgba(45,189,110,.06);color:var(--verde-claro)}
+.drop.ok{border-color:var(--verde);border-style:solid;background:rgba(45,189,110,.08);color:var(--verde-claro)}
+.drop input{display:none}
+.arquivos-lista{margin-top:8px;font-size:11px;color:var(--texto2);text-align:left}
+.arquivos-lista div{padding:3px 0;display:flex;justify-content:space-between;gap:8px}
+.arquivos-lista .x{color:var(--vermelho);cursor:pointer;font-weight:bold}
+
+.linha-config{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin-bottom:18px}
+.campo label{display:block;font-size:11px;color:var(--texto2);margin-bottom:5px;letter-spacing:.4px}
+.campo input,.campo select{background:var(--bg2);border:1px solid var(--borda);color:var(--texto);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;min-width:140px}
+.campo input:focus,.campo select:focus{border-color:var(--verde)}
+
+.btn{background:linear-gradient(135deg,var(--verde),var(--verde-escuro));color:#04170c;border:none;padding:12px 22px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:.18s;box-shadow:0 0 0 rgba(45,189,110,0)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(45,189,110,.35)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.sec{background:var(--card2);color:var(--verde-claro);border:1px solid rgba(45,189,110,.4)}
+
+.status-msg{margin:14px 0;padding:12px 16px;border-radius:10px;font-size:12.5px;display:none;line-height:1.55}
+.status-msg.mostra{display:block}
+.status-msg.ok{background:rgba(45,189,110,.1);border:1px solid rgba(45,189,110,.4);color:var(--verde-claro)}
+.status-msg.erro{background:rgba(255,92,92,.08);border:1px solid rgba(255,92,92,.4);color:#ffb0b0}
+.status-msg.info{background:rgba(74,168,255,.08);border:1px solid rgba(74,168,255,.35);color:#bcdcff}
+
+/* ===== tabelas ===== */
+.tabela-wrap{overflow-x:auto;border:1px solid var(--borda);border-radius:12px;margin-top:16px;max-height:520px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+th{background:var(--card2);color:var(--verde-claro);padding:10px 12px;text-align:left;font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;position:sticky;top:0;z-index:2}
+td{padding:9px 12px;border-top:1px solid var(--borda);color:var(--texto)}
+tr:hover td{background:rgba(45,189,110,.04)}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.chip{padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600}
+.chip.verde{background:rgba(45,189,110,.14);color:var(--verde-claro)}
+.chip.amarelo{background:rgba(245,197,66,.14);color:var(--amarelo)}
+.chip.vermelho{background:rgba(255,92,92,.14);color:var(--vermelho)}
+.chip.cinza{background:rgba(143,181,157,.12);color:var(--texto2)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:16px 0}
+.kpi{background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:14px 16px}
+.kpi b{font-size:21px;display:block;color:var(--verde-claro)}
+.kpi span{font-size:11px;color:var(--texto2);letter-spacing:.4px}
+
+/* início */
+.home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:8px}
+.home-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:20px;cursor:pointer;transition:.2s}
+.home-card:hover{border-color:var(--verde);transform:translateY(-3px);box-shadow:0 8px 26px rgba(45,189,110,.18)}
+.home-card .ico{font-size:26px;margin-bottom:10px}
+.home-card b{display:block;font-size:14.5px;margin-bottom:6px}
+.home-card p{font-size:12px;color:var(--texto2);line-height:1.55}
+
+.credito-topo{font-size:11px;color:var(--texto2);border:1px solid var(--borda);background:rgba(45,189,110,.05);border-radius:8px;padding:8px 14px;margin-bottom:22px;letter-spacing:.3px}
+.credito-topo b{color:var(--verde-claro)}
+.rodape-credito{margin-top:40px;padding:18px 14px;border-top:1px solid var(--borda);text-align:center;font-size:11.5px;color:var(--texto2);letter-spacing:.4px}
+.rodape-credito b{color:var(--verde-claro)}
+
+@media(max-width:860px){
+  .app{flex-direction:column}
+  .sidebar{width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;align-items:center;padding:12px}
+  .nav-sec{display:none}
+  .sidebar .credito{width:100%;margin-top:8px;border-top:1px solid var(--borda);padding-top:8px;text-align:center}
+  .logo{border:none;padding:0 10px 0 0;margin:0}
+  .nav-btn{width:auto}
+  .main{padding:20px 16px}
+}
+
+/* ===== módulo Ligação Energizados (escopo #pg-gerador) ===== */
+#pg-gerador {
+    --verde:    #2DBD6E;
+    --verde-lt: rgba(45,189,110,.12);
+    --cinza-bg: transparent;
+    --cinza-bd: #1e3326;
+    --cinza-tx: #8fb59d;
+    --preto:    #e8f5ec;
+    --branco:   #101a13;
+    --laranja:  #F59E0B;
+    --vermelho: #EF4444;
+    --azul:     #3B82F6;
+    --roxo:     #8B5CF6;
+    --radius:   10px;
+    --shadow:   0 0 0 rgba(0,0,0,0);
+  }
+#pg-gerador * { box-sizing: border-box; margin: 0; padding: 0; }
+#pg-gerador { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--cinza-bg); color: var(--preto); min-height: 100vh; }
+#pg-gerador header { background: var(--verde); color: #fff; padding: 18px 32px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+#pg-gerador header .logo { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
+#pg-gerador header .sub { font-size: .85rem; opacity: .8; }
+#pg-gerador .container { max-width: 1400px; margin: 0 auto; padding: 28px 24px; }
+#pg-gerador .card { background: var(--branco); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px; margin-bottom: 22px; }
+#pg-gerador .card-title { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--cinza-tx); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+#pg-gerador .card-title::before { content: ''; display: inline-block; width: 3px; height: 14px; background: var(--verde); border-radius: 2px; }
+#pg-gerador .upload-area {
+    border: 2px dashed var(--cinza-bd); border-radius: 10px; padding: 48px 24px;
+    text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+    position: relative;
+  }
+#pg-gerador .upload-area:hover, #pg-gerador .upload-area.dragover { border-color: var(--verde); background: var(--verde-lt); }
+#pg-gerador .upload-area.has-file { border-color: var(--verde); border-style: solid; background: rgba(45,189,110,.08); }
+#pg-gerador .upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+#pg-gerador .upload-icon { font-size: 2.2rem; margin-bottom: 10px; }
+#pg-gerador .upload-label { font-size: 1rem; font-weight: 700; }
+#pg-gerador .upload-sub { font-size: .8rem; color: var(--cinza-tx); margin-top: 6px; }
+#pg-gerador .upload-fn { font-size: .78rem; color: var(--verde); margin-top: 8px; font-weight: 700; }
+#pg-gerador .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+#pg-gerador .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 99px; font-size: .73rem; font-weight: 700; background: var(--verde-lt); color: var(--verde); border: 1px solid rgba(45,189,110,.4); }
+#pg-gerador .chip-count { background: var(--verde); color: #fff; border-radius: 99px; padding: 1px 7px; font-size: .65rem; }
+#pg-gerador .btn { padding: 10px 24px; border-radius: 7px; font-size: .87rem; font-weight: 700; cursor: pointer; border: none; transition: background .15s, transform .1s; display: inline-flex; align-items: center; gap: 7px; }
+#pg-gerador .btn:disabled { opacity: .45; cursor: not-allowed; }
+#pg-gerador .btn:not(:disabled):active { transform: scale(.97); }
+#pg-gerador .btn-primary { background: var(--verde); color: #fff; }
+#pg-gerador .btn-primary:not(:disabled):hover { background: #25a35f; }
+#pg-gerador .btn-outline { background: transparent; border: 1.5px solid var(--cinza-bd); color: var(--preto); }
+#pg-gerador .btn-outline:hover { border-color: var(--verde); color: var(--verde); }
+#pg-gerador .btn-export { background: #1D6F42; color: #fff; }
+#pg-gerador .btn-export:hover { background: #1d8a4f; }
+#pg-gerador .btn-sm { padding: 6px 14px; font-size: .78rem; }
+#pg-gerador .actions-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+#pg-gerador .progress-wrap { display: none; margin-top: 14px; }
+#pg-gerador .progress-wrap.visible { display: block; }
+#pg-gerador .progress-label { font-size: .78rem; color: var(--cinza-tx); margin-bottom: 6px; }
+#pg-gerador .progress-bar { height: 6px; background: var(--cinza-bd); border-radius: 99px; overflow: hidden; }
+#pg-gerador .progress-fill { height: 100%; background: var(--verde); border-radius: 99px; transition: width .3s; width: 0%; }
+#pg-gerador #log { background: #0c130e; color: rgba(45,189,110,.4); font-family: monospace; font-size: .75rem; padding: 14px 16px; border-radius: 8px; max-height: 150px; overflow-y: auto; line-height: 1.7; display: none; margin-top: 12px; }
+#pg-gerador #log.visible { display: block; }
+#pg-gerador .log-err { color: #F87171; }
+#pg-gerador .log-warn { color: #FBD38D; }
+#pg-gerador .log-ok { color: #6EE7B7; }
+#pg-gerador .stats-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 22px; }
+#pg-gerador .stat-card { flex: 1; min-width: 150px; background: var(--branco); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); border-left: 4px solid var(--verde); }
+#pg-gerador .stat-card.orange { border-left-color: var(--laranja); }
+#pg-gerador .stat-card.red { border-left-color: var(--vermelho); }
+#pg-gerador .stat-card.blue { border-left-color: var(--azul); }
+#pg-gerador .stat-card.purple { border-left-color: var(--roxo); }
+#pg-gerador .stat-val { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+#pg-gerador .stat-lbl { font-size: .72rem; color: var(--cinza-tx); margin-top: 4px; font-weight: 600; }
+#pg-gerador .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--cinza-bd); margin-bottom: 18px; flex-wrap: wrap; }
+#pg-gerador .tab { padding: 9px 20px; font-size: .83rem; font-weight: 700; cursor: pointer; border-radius: 7px 7px 0 0; border: 2px solid transparent; border-bottom: none; color: var(--cinza-tx); background: transparent; transition: color .15s, background .15s; position: relative; bottom: -2px; }
+#pg-gerador .tab:hover { color: var(--verde); background: var(--verde-lt); }
+#pg-gerador .tab.active { color: #fff; background: var(--verde); border-color: var(--verde); border-bottom-color: var(--verde); }
+#pg-gerador .tab.active .tab-badge { background: rgba(255,255,255,0.3) !important; color: #fff !important; }
+#pg-gerador .tab-badge { display: inline-block; background: var(--verde); color: #fff; border-radius: 99px; font-size: .65rem; padding: 1px 7px; margin-left: 5px; vertical-align: middle; }
+#pg-gerador .tab-panel { display: none; }
+#pg-gerador .tab-panel.active { display: block; }
+#pg-gerador .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--cinza-bd); }
+#pg-gerador table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+#pg-gerador thead tr { background: #15221a; }
+#pg-gerador thead th { padding: 10px 12px; text-align: left; font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--cinza-tx); border-bottom: 1px solid var(--cinza-bd); white-space: nowrap; }
+#pg-gerador tbody tr { border-bottom: 1px solid #0c130e; }
+#pg-gerador tbody tr:hover { background: #101a13; }
+#pg-gerador tbody td { padding: 9px 12px; white-space: nowrap; }
+#pg-gerador .badge { display: inline-block; border-radius: 99px; font-size: .68rem; font-weight: 700; padding: 2px 10px; }
+#pg-gerador .badge-bape { background: #DBEAFE; color: #1E40AF; }
+#pg-gerador .badge-1bol { background: #FEF3C7; color: #92400E; }
+#pg-gerador .badge-base { background: #FEE2E2; color: #991B1B; }
+#pg-gerador .badge-ajust { background: #D1FAE5; color: #065F46; }
+#pg-gerador .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; justify-content: space-between; }
+#pg-gerador .search-input { border: 1.5px solid var(--cinza-bd); border-radius: 7px; padding: 7px 12px; font-size: .83rem; outline: none; min-width: 220px; }
+#pg-gerador .search-input:focus { border-color: var(--verde); }
+#pg-gerador .pag { display: flex; align-items: center; gap: 6px; font-size: .78rem; margin-top: 12px; flex-wrap: wrap; }
+#pg-gerador .pag-btn { padding: 5px 11px; border-radius: 6px; border: 1.5px solid var(--cinza-bd); background: var(--branco); cursor: pointer; font-size: .78rem; font-weight: 600; }
+#pg-gerador .pag-btn:hover { border-color: var(--verde); color: var(--verde); }
+#pg-gerador .pag-btn.active { background: var(--verde); color: #fff; border-color: var(--verde); }
+#pg-gerador .pag-info { color: var(--cinza-tx); }
+#pg-gerador .empty { text-align: center; padding: 52px 20px; color: var(--cinza-tx); }
+#pg-gerador .empty-icon { font-size: 2.4rem; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div><div class="orb orb1"></div><div class="orb orb2"></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icone">⚡</div>
+      <div class="logo-txt"><b>Central iGreen</b><span>Cobrança & Qualidade</span></div>
+    </div>
+    <button class="nav-btn ativo" data-pg="home">🏠 Início</button>
+    <div class="nav-sec">Qualidade</div>
+    <button class="nav-btn" data-pg="analise">📊 Análise Times & Meet Call</button>
+    <button class="nav-btn" data-pg="desempenho">📈 Desempenho por Agente</button>
+    <div class="nav-sec">Resultados</div>
+    <button class="nav-btn" data-pg="conversao">🎯 Conversão Pós-Contato</button>
+    <button class="nav-btn" data-pg="calculadora">🧮 Calculadora do Atendente</button>
+    <div class="nav-sec">Disparos</div>
+    <button class="nav-btn" data-pg="d3c">📤 Disparo 3C+</button>
+    <button class="nav-btn" data-pg="dluciano">📤 Disparo Luciano</button>
+    <button class="nav-btn" data-pg="gerador">📞 Ligação Energizados</button>
+    <div class="credito">Desenvolvido por<br>jennifer.silveira@igreenenergy.com.br<br>iGreen Energy · 2026</div>
+  </aside>
+
+  <main class="main">
+
+  <div class="credito-topo">⚡ Desenvolvido por <b>jennifer.silveira@igreenenergy.com.br</b> · iGreen Energy · 2026</div>
+
+  <!-- ============ INÍCIO ============ -->
+  <section class="pagina ativa" id="pg-home">
+    <h1>Central iGreen <span class="tag">TUDO EM UM SÓ LUGAR</span></h1>
+    <p class="sub">Plataforma única com os processos diários de qualidade e disparo. Todos os dados são processados localmente no seu navegador — nenhum arquivo sai do seu computador.</p>
+    <div class="home-grid">
+      <div class="home-card" data-pg="analise"><div class="ico">📊</div><b>Análise Times & Meet Call</b><p>Envie os CSVs do dia (ligações, produtividade e pausas) e gere os 2 Excel: Analise_Times e Analise_MeetCall, com abas por time, análise manual e status 🟢🟡🔴.</p></div>
+      <div class="home-card" data-pg="desempenho"><div class="ico">📈</div><b>Desempenho por Agente</b><p>Ligações ≥15s, tempo manual vs. ligações manuais e coluna Diferença, direto na tela e exportável.</p></div>
+      <div class="home-card" data-pg="conversao"><div class="ico">🎯</div><b>Conversão Pós-Contato</b><p>Cruza o CSV das ligações do dia com o CSV de pagos: mostra quem pagou após o seu contato, taxa de conversão, valor recuperado e resultado por qualificação.</p></div>
+      <div class="home-card" data-pg="calculadora"><div class="ico">🧮</div><b>Calculadora do Atendente</b><p>Calcula a pontuação do mês: recebidos, promessas, monitoria e o bônus ×1,2 — com modo Atendente e Atendente Pleno (média da equipe).</p></div>
+      <div class="home-card" data-pg="d3c"><div class="ico">📤</div><b>Disparo 3C+</b><p>Filtra "Promessa de Pagamento" e "Solicitou 2ª via" do CSV de ligações e gera Excel com Celular | CPF.</p></div>
+      <div class="home-card" data-pg="dluciano"><div class="ico">📤</div><b>Disparo Luciano</b><p>Base de vencidos → clientes puros com 1 boleto, 3 a 30 dias vencidos, limite de 5.000 clientes.</p></div>
+      <div class="home-card" data-pg="gerador"><div class="ico">📞</div><b>Ligação Energizados</b><p>Base iVolt → listas de ligação (Base Total, 1 Boleto, Base Menor, BA/PE), remoção de tabulações via 3C+ e exportação no padrão POP.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ ANÁLISE TIMES & MEET CALL ============ -->
+  <section class="pagina" id="pg-analise">
+    <h1>📊 Análise Times & Meet Call</h1>
+    <p class="sub">Envie o CSV de ligações do 3C+ e o(s) CSV(s) de produtividade do dia. CSVs de pausas individuais são opcionais — quando enviados, o intervalo líquido desconta as pausas produtivas. Serão gerados 2 arquivos: <b>Analise_Times_DD-MM.xlsx</b> e <b>Analise_MeetCall_DD-MM.xlsx</b>.</p>
+    <div class="grid2">
+      <div class="card"><h3>📞 CSV de Ligações (3C+)</h3><div class="dica">Colunas: agent_name, campaign_name, qualification_name, identifier, call_mode, speaking_with_agent_time, call_date</div>
+        <label class="drop" id="drop-an-lig">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-an-lig"></label></div>
+      <div class="card"><h3>⏱️ CSV(s) de Produtividade</h3><div class="dica">Colunas: agent_name, manual, interval, acw (TPA). Pode enviar mais de um.</div>
+        <label class="drop" id="drop-an-prod">Clique ou arraste o(s) CSV(s) aqui<input type="file" accept=".csv" id="file-an-prod" multiple></label>
+        <div class="arquivos-lista" id="lista-an-prod"></div></div>
+      <div class="card"><h3>☕ CSVs de Pausas Individuais <span class="opcional">opcional</span></h3><div class="dica">Colunas: agent, interval (tipo), duration. O intervalo líquido descontará as pausas produtivas (Chat, Reunião, Treinamento, Ticket etc.).</div>
+        <label class="drop" id="drop-an-pausa">Clique ou arraste o(s) CSV(s) aqui<input type="file" accept=".csv" id="file-an-pausa" multiple></label>
+        <div class="arquivos-lista" id="lista-an-pausa"></div></div>
+    </div>
+    <div class="linha-config">
+      <div class="campo"><label>Data da análise (usada no nome dos arquivos)</label><input type="text" id="an-data" placeholder="DD/MM"></div>
+      <button class="btn" id="btn-an-gerar" disabled>⚙️ Processar e gerar os 2 Excel</button>
+    </div>
+    <div class="status-msg" id="an-msg"></div>
+    <div id="an-resultado"></div>
+  </section>
+
+  <!-- ============ DESEMPENHO ============ -->
+  <section class="pagina" id="pg-desempenho">
+    <h1>📈 Desempenho por Agente</h1>
+    <p class="sub">Envie o CSV de ligações (e, se quiser a coluna Diferença, o CSV de produtividade). A tabela mostra ligações ≥15s, tempo em ligações manuais e a diferença entre o manual da produtividade e o manual real com ligação.</p>
+    <div class="grid2">
+      <div class="card"><h3>📞 CSV de Ligações (3C+)</h3><div class="dica">Mesmo relatório da análise diária.</div>
+        <label class="drop" id="drop-de-lig">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-de-lig"></label></div>
+      <div class="card"><h3>⏱️ CSV de Produtividade <span class="opcional">opcional</span></h3><div class="dica">Necessário para calcular a coluna Diferença (manual sem ligação).</div>
+        <label class="drop" id="drop-de-prod">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-de-prod"></label></div>
+    </div>
+    <div class="linha-config">
+      <button class="btn" id="btn-de-gerar" disabled>⚙️ Gerar desempenho</button>
+      <button class="btn sec" id="btn-de-excel" style="display:none">⬇️ Baixar Excel</button>
+    </div>
+    <div class="status-msg" id="de-msg"></div>
+    <div id="de-kpis"></div>
+    <div id="de-tabela"></div>
+  </section>
+
+  <!-- ============ CONVERSÃO PÓS-CONTATO ============ -->
+  <section class="pagina" id="pg-conversao">
+    <h1>🎯 Conversão Pós-Contato</h1>
+    <p class="sub">Envie o CSV das ligações do dia (clientes que você falou, com a qualificação) e o CSV de pagos. O cruzamento é feito por <b>CPF</b> e mostra quem pagou <b>após</b> o seu contato, quem já tinha pago antes e quem ainda não pagou — com taxa de conversão, valor recuperado e resultado por qualificação.</p>
+    <div class="grid2">
+      <div class="card"><h3>📞 CSV de Ligações do Dia (3C+)</h3><div class="dica">Colunas: agent_name, qualification_name, identifier (CPF), call_date, speaking_with_agent_time.</div>
+        <label class="drop" id="drop-cv-lig">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-cv-lig"></label></div>
+      <div class="card"><h3>💰 CSV/Excel de Pagos</h3><div class="dica">Planilha de pagos com cpf, valorapagar e dtpagamento (aceita a versão limpa ou a leve).</div>
+        <label class="drop" id="drop-cv-pagos">Clique ou arraste o arquivo aqui<input type="file" accept=".csv,.xlsx,.xls" id="file-cv-pagos"></label></div>
+    </div>
+    <div class="linha-config">
+      <div class="campo"><label>Considerar apenas ligações com fala ≥ (segundos)</label><input type="number" id="cv-min" value="15" min="0"></div>
+      <div class="campo"><label>Filtrar por agente <span style="color:var(--texto3)">(opcional)</span></label><select id="cv-agente"><option value="">Todos os agentes</option></select></div>
+      <button class="btn" id="btn-cv-gerar" disabled>⚙️ Cruzar e analisar</button>
+      <button class="btn sec" id="btn-cv-excel" style="display:none">⬇️ Baixar Excel</button>
+    </div>
+    <div class="status-msg" id="cv-msg"></div>
+    <div id="cv-kpis"></div>
+    <div id="cv-qual"></div>
+    <div id="cv-tabela"></div>
+  </section>
+
+  <!-- ============ CALCULADORA DO ATENDENTE ============ -->
+  <section class="pagina" id="pg-calculadora">
+    <h1>🧮 Calculadora do Atendente</h1>
+    <p class="sub">Calcula a pontuação do mês. Bateu a meta = pontuação cheia; passou da meta = proporcional acima. No final, o total é multiplicado por <b>1,2</b>. Todos os parâmetros são editáveis em ⚙️ Parâmetros.</p>
+
+    <div class="card" style="margin-bottom:16px">
+      <h3>⚙️ Parâmetros <span class="opcional">edite se as regras mudarem</span></h3>
+      <div class="linha-config" style="margin:12px 0 0">
+        <div class="campo"><label>Pts recebidos (atendente)</label><input type="number" id="pr-at-rec" value="3500"></div>
+        <div class="campo"><label>Pts promessa (atendente)</label><input type="number" id="pr-at-pro" value="500"></div>
+        <div class="campo"><label>Pts monitoria (atendente)</label><input type="number" id="pr-at-mon" value="1000"></div>
+        <div class="campo"><label>Bônus 100% em todas</label><input type="number" id="pr-at-mon100" value="1100"></div>
+      </div>
+      <div class="linha-config" style="margin:8px 0 0">
+        <div class="campo"><label>Pts média equipe (pleno)</label><input type="number" id="pr-pl-med" value="3400"></div>
+        <div class="campo"><label>Referência da média (pts)</label><input type="number" id="pr-pl-ref" value="5000"></div>
+        <div class="campo"><label>Pts monitoria (pleno)</label><input type="number" id="pr-pl-mon" value="500"></div>
+        <div class="campo"><label>Monitoria 100% em todas (pleno)</label><input type="number" id="pr-pl-mon100" value="600"></div>
+        <div class="campo"><label>Pts recebidos (pleno)</label><input type="number" id="pr-pl-rec" value="1000"></div>
+        <div class="campo"><label>Meta recebidos (pleno)</label><input type="number" id="pr-pl-meta" value="35000"></div>
+        <div class="campo"><label>Multiplicador final</label><input type="number" id="pr-mult" value="1.2" step="0.1"></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <!-- Atendente -->
+      <div class="card">
+        <h3>👤 Atendente</h3>
+        <div class="linha-config" style="margin:12px 0 0;flex-direction:column;align-items:stretch;gap:10px">
+          <div class="campo"><label>Nome</label><input type="text" id="at-nome" placeholder="Nome do atendente" style="width:100%"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div class="campo" style="flex:1"><label>Meta de recebidos</label><input type="number" id="at-meta" value="70000" style="width:100%;min-width:0"></div>
+            <div class="campo" style="flex:1"><label>Recebidos realizados</label><input type="number" id="at-real" style="width:100%;min-width:0"></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div class="campo" style="flex:1"><label>Meta de promessas pagas</label><input type="number" id="at-prometa" value="0" style="width:100%;min-width:0"></div>
+            <div class="campo" style="flex:1"><label>Promessas pagas</label><input type="number" id="at-proreal" style="width:100%;min-width:0"></div>
+          </div>
+          <div class="campo"><label>Notas das monitorias (%) — separe por vírgula. Ex: 100, 95, 100</label><input type="text" id="at-mon" placeholder="100, 100, 100" style="width:100%"></div>
+          <button class="btn" id="btn-at-calc">🧮 Calcular atendente</button>
+        </div>
+        <div id="at-resultado" style="margin-top:14px"></div>
+      </div>
+      <!-- Pleno -->
+      <div class="card">
+        <h3>⭐ Atendente Pleno</h3>
+        <div class="dica" style="margin-top:4px">Atende meio período + demandas de líder. Recebe pela média da equipe + monitoria + meta própria de recebidos.</div>
+        <div class="linha-config" style="margin:8px 0 0;flex-direction:column;align-items:stretch;gap:10px">
+          <div class="campo"><label>Nome</label><input type="text" id="pl-nome" placeholder="Nome do atendente pleno" style="width:100%"></div>
+          <div class="campo"><label>Média de pontos da equipe (base, antes do ×1,2) — preenchida automaticamente pela lista abaixo</label><input type="number" id="pl-media" style="width:100%"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div class="campo" style="flex:1"><label>Recebidos realizados</label><input type="number" id="pl-real" style="width:100%;min-width:0"></div>
+            <div class="campo" style="flex:1"><label>Notas das monitorias (%)</label><input type="text" id="pl-mon" placeholder="100, 100" style="width:100%;min-width:0"></div>
+          </div>
+          <label style="font-size:12.5px;color:var(--texto2);display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pl-extra" checked style="accent-color:var(--verde)"> Incluir +500 pts extras prometidos em reunião (junho)</label>
+          <button class="btn" id="btn-pl-calc">🧮 Calcular pleno</button>
+        </div>
+        <div id="pl-resultado" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:2px">
+      <h3>👥 Equipe do mês</h3>
+      <div class="dica">Cada cálculo pode ser adicionado aqui. A média de pontos base da equipe alimenta automaticamente o cálculo do pleno.</div>
+      <div class="linha-config" style="margin:10px 0 0">
+        <button class="btn sec" id="btn-eq-excel" disabled>⬇️ Baixar Excel da equipe</button>
+        <button class="btn sec" id="btn-eq-limpar" disabled>🗑️ Limpar lista</button>
+      </div>
+      <div id="eq-tabela"></div>
+    </div>
+  </section>
+
+  <!-- ============ DISPARO 3C+ ============ -->
+  <section class="pagina" id="pg-d3c">
+    <h1>📤 Disparo 3C+</h1>
+    <p class="sub">Envie o CSV de ligações do 3C+. Serão filtradas as qualificações <b>"Promessa de Pagamento"</b> e <b>"Solicitou 2ª via"</b> e gerado um Excel com <b>Celular | CPF</b>. O celular é extraído do record_name (11 dígitos antes do hífen) ou da coluna number; o CPF vem do identifier formatado.</p>
+    <div class="grid2">
+      <div class="card"><h3>📞 CSV de Ligações (3C+)</h3><div class="dica">Relatório de ligações com qualification_name, identifier, record_name/number.</div>
+        <label class="drop" id="drop-3c">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-3c"></label></div>
+    </div>
+    <div class="linha-config">
+      <button class="btn" id="btn-3c-gerar" disabled>⚙️ Filtrar e gerar Excel</button>
+    </div>
+    <div class="status-msg" id="d3c-msg"></div>
+    <div id="d3c-tabela"></div>
+  </section>
+
+  <!-- ============ DISPARO LUCIANO ============ -->
+  <section class="pagina" id="pg-dluciano">
+    <h1>📤 Disparo Luciano</h1>
+    <p class="sub">Envie a base de vencidos (CSV ou Excel). Regras aplicadas: <b>clientes puros com exatamente 1 boleto</b>, vencido entre <b>3 e 30 dias</b>, limitado a <b>5.000 clientes</b>. ⚠️ Nunca disparar para clientes com menos de 3 dias vencidos — sem exceções.</p>
+    <div class="grid2">
+      <div class="card"><h3>📄 Base de Vencidos</h3><div class="dica">CSV ou XLSX com cliente, celular, cpf, valorapagar e data de vencimento (cdatavencoriginal ou dtvencimento).</div>
+        <label class="drop" id="drop-lu">Clique ou arraste o arquivo aqui<input type="file" accept=".csv,.xlsx,.xls" id="file-lu"></label></div>
+    </div>
+    <div class="linha-config">
+      <div class="campo"><label>Dias vencidos (mín)</label><input type="number" id="lu-min" value="3" min="3"></div>
+      <div class="campo"><label>Dias vencidos (máx)</label><input type="number" id="lu-max" value="30"></div>
+      <div class="campo"><label>Limite de clientes</label><input type="number" id="lu-limite" value="5000"></div>
+      <button class="btn" id="btn-lu-gerar" disabled>⚙️ Filtrar e gerar Excel</button>
+    </div>
+    <div class="status-msg" id="lu-msg"></div>
+    <div id="lu-tabela"></div>
+  </section>
+
+  <!-- ============ LIGAÇÃO ENERGIZADOS (iVOLT) ============ -->
+  <section class="pagina" id="pg-gerador">
+    <h1>📞 Lista de Ligação Energizados <span class="tag">iVOLT</span></h1>
+    <p class="sub">Gera as listas de ligação a partir da base iVolt: Base Total, 1 Boleto (3–30 dias), Base Menor (2+ boletos) e BA/PE (3–45 dias), com filtro personalizado e remoção de tabulações pelo CSV do 3C+. Exportação no padrão POP.</p>
+<div class="container">
+
+  <!-- UPLOAD -->
+  <div class="card">
+    <div class="card-title">Importar Arquivos</div>
+
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+
+      <div style="flex:1;min-width:260px;">
+        <div style="font-size:.72rem;font-weight:700;color:var(--cinza-tx);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">① Planilha Base Energizados (.xlsx ou .csv)</div>
+        <div class="upload-area" id="uploadArea"
+             ondragover="event.preventDefault();this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="onDrop(event)">
+          <input type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.ms-excel" id="fileInput" multiple onchange="onFileSelect(event)">
+          <div class="upload-icon">📋</div>
+          <div class="upload-label">Clique ou arraste as planilhas aqui</div>
+          <div class="upload-sub">Aceita .xlsx ou .csv — 1 ou 2 arquivos, serão unificados</div>
+          <div class="upload-sub" style="margin-top:4px;color:#6B7280;">Para 2 arquivos: segure <strong>Ctrl</strong> e selecione os 2 juntos</div>
+          <div class="upload-fn" id="uploadFn"></div>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:260px;">
+        <div style="font-size:.72rem;font-weight:700;color:var(--cinza-tx);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">② Relatório 3C+ (.csv) <span style="font-weight:400;color:#9CA3AF;">— opcional</span></div>
+        <div class="upload-area" id="upload3cArea"
+             ondragover="event.preventDefault();this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="onDrop3c(event)"
+             style="padding:32px 24px;">
+          <input type="file" accept=".csv" id="file3cInput" onchange="onFileSelect3c(event)">
+          <div class="upload-icon">🚫</div>
+          <div class="upload-label">Clique ou arraste o CSV aqui</div>
+          <div class="upload-sub">Relatório de contatos do 3C+</div>
+          <div class="upload-fn" id="upload3cFn"></div>
+        </div>
+        <div id="info3c" style="font-size:.75rem;color:var(--cinza-tx);margin-top:8px;min-height:18px;"></div>
+      </div>
+
+    </div>
+
+    <div class="chips" id="chipsDetectadas"></div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label" id="progressLabel">Lendo arquivo...</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn btn-primary" id="btnProcessar" onclick="processarTudo()" disabled>⚙ Gerar Listas</button>
+      <button class="btn btn-outline" onclick="limparTudo()">🗑 Limpar</button>
+      <span id="statusTxt" style="font-size:.8rem;color:var(--cinza-tx);"></span>
+    </div>
+
+    <div id="log"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">        <div class="stat-val" id="sTotal">0</div><div class="stat-lbl">Base Total</div></div>
+    <div class="stat-card orange"> <div class="stat-val" id="s1Bol">0</div> <div class="stat-lbl">1 Boleto (3–30 dias)</div></div>
+    <div class="stat-card red">    <div class="stat-val" id="sBase">0</div> <div class="stat-lbl">Base Menor (3–30 dias, 2+)</div></div>
+    <div class="stat-card purple"> <div class="stat-val" id="sBaPe">0</div> <div class="stat-lbl">Lista BA e PE (3–45 dias)</div></div>
+    <div class="stat-card blue">   <div class="stat-val" id="sValor">R$ 0,00</div><div class="stat-lbl">Valor Total em Aberto</div></div>
+  </div>
+
+  <!-- LISTAS -->
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" data-tab="ajust"  onclick="switchTab('ajust')">📋 Base Total <span class="tab-badge" id="badgeAjust">0</span></div>
+      <div class="tab"        data-tab="umbol"  onclick="switchTab('umbol')">1 Boleto <span class="tab-badge" id="badgeUmbol" style="background:var(--laranja)">0</span></div>
+      <div class="tab"        data-tab="base"   onclick="switchTab('base')">Base Menor <span class="tab-badge" id="badgeBase" style="background:var(--vermelho)">0</span></div>
+      <div class="tab"        data-tab="bape"   onclick="switchTab('bape')">Lista BA e PE <span class="tab-badge" id="badgeBape" style="background:var(--azul)">0</span></div>
+      <div class="tab"        data-tab="custom" onclick="switchTab('custom')">🎯 Personalizado <span class="tab-badge" id="badgeCustom" style="background:var(--roxo)">0</span></div>
+    </div>
+
+    <!-- AJUSTANDO -->
+    <div class="tab-panel active" id="panel-ajust">
+      <div class="toolbar">
+        <input class="search-input" type="text" placeholder="Buscar CPF, Cliente, Instalação..." id="searchAjust" oninput="renderTabela('ajust')">
+        <button class="btn btn-export btn-sm" onclick="exportarCsv('ajust')">⬇ Exportar CSV</button>
+<button class="btn btn-export btn-sm" onclick="exportarXlsx('ajust')">⬇ Exportar Excel</button>
+      </div>
+      <div class="tbl-wrap" id="tblAjust"></div>
+      <div class="pag" id="pagAjust"></div>
+    </div>
+
+    <!-- 1 BOLETO -->
+    <div class="tab-panel" id="panel-umbol">
+      <div class="toolbar">
+        <input class="search-input" type="text" placeholder="Buscar CPF, Cliente, Instalação..." id="searchUmbol" oninput="renderTabela('umbol')">
+        <button class="btn btn-export btn-sm" onclick="exportarCsv('umbol')">⬇ Exportar CSV</button>
+<button class="btn btn-export btn-sm" onclick="exportarXlsx('umbol')">⬇ Exportar Excel</button>
+      </div>
+      <div class="tbl-wrap" id="tblUmbol"></div>
+      <div class="pag" id="pagUmbol"></div>
+    </div>
+
+    <!-- BASE MENOR -->
+    <div class="tab-panel" id="panel-base">
+      <div class="toolbar">
+        <input class="search-input" type="text" placeholder="Buscar CPF, Cliente, Instalação..." id="searchBase" oninput="renderTabela('base')">
+        <button class="btn btn-export btn-sm" onclick="exportarCsv('base')">⬇ Exportar CSV</button>
+<button class="btn btn-export btn-sm" onclick="exportarXlsx('base')">⬇ Exportar Excel</button>
+      </div>
+      <div class="tbl-wrap" id="tblBase"></div>
+      <div class="pag" id="pagBase"></div>
+    </div>
+
+    <!-- BA e PE -->
+    <div class="tab-panel" id="panel-bape">
+      <div class="toolbar">
+        <input class="search-input" type="text" placeholder="Buscar CPF, Cliente, Instalação..." id="searchBape" oninput="renderTabela('bape')">
+        <button class="btn btn-export btn-sm" onclick="exportarCsv('bape')">⬇ Exportar CSV</button>
+<button class="btn btn-export btn-sm" onclick="exportarXlsx('bape')">⬇ Exportar Excel</button>
+      </div>
+      <div class="tbl-wrap" id="tblBape"></div>
+      <div class="pag" id="pagBape"></div>
+    </div>
+
+    <!-- PERSONALIZADO -->
+    <div class="tab-panel" id="panel-custom">
+      <div style="background:#F5F3FF;border:1.5px solid #DDD6FE;border-radius:10px;padding:18px 20px;margin-bottom:16px;">
+        <div style="font-size:.72rem;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px;">⚙ Filtros Personalizados</div>
+        <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;">
+          <div>
+            <label style="font-size:.72rem;font-weight:700;color:var(--cinza-tx);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Dias Vencidos — De</label>
+            <input type="number" id="customDiasMin" min="0" max="9999" value="0" placeholder="0"
+              style="width:90px;padding:8px 10px;border:1.5px solid #DDD6FE;border-radius:7px;font-size:.9rem;font-weight:700;text-align:center;outline:none;">
+          </div>
+          <div style="font-size:1.2rem;color:#9CA3AF;padding-bottom:6px;">→</div>
+          <div>
+            <label style="font-size:.72rem;font-weight:700;color:var(--cinza-tx);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Dias Vencidos — Até</label>
+            <input type="number" id="customDiasMax" min="0" max="9999" value="9999" placeholder="sem limite"
+              style="width:110px;padding:8px 10px;border:1.5px solid #DDD6FE;border-radius:7px;font-size:.9rem;font-weight:700;text-align:center;outline:none;">
+          </div>
+          <div style="width:1px;height:36px;background:var(--cinza-bd);margin:0 4px;"></div>
+          <div>
+            <label style="font-size:.72rem;font-weight:700;color:var(--cinza-tx);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Valor Total Mínimo (R$)</label>
+            <input type="number" id="customValorMin" min="0" value="0" placeholder="0,00" step="0.01"
+              style="width:150px;padding:8px 10px;border:1.5px solid #DDD6FE;border-radius:7px;font-size:.9rem;font-weight:700;outline:none;">
+          </div>
+          <button onclick="aplicarFiltroCustom()"
+            style="padding:8px 18px;background:#7C3AED;color:#fff;border:none;border-radius:7px;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:1px;">
+            ▶ Aplicar
+          </button>
+          <button onclick="resetarFiltroCustom()"
+            style="padding:8px 16px;background:#EDE9FE;color:#7C3AED;border:1.5px solid #DDD6FE;border-radius:7px;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:1px;">
+            ↺ Resetar
+          </button>
+        </div>
+        <div id="customResumo" style="font-size:.75rem;color:#7C3AED;margin-top:12px;font-weight:600;min-height:18px;"></div>
+      </div>
+      <div class="toolbar">
+        <input class="search-input" type="text" placeholder="Buscar CPF, Cliente, Instalação..." id="searchCustom" oninput="renderTabela('custom')">
+        <button class="btn btn-export btn-sm" onclick="exportarCsv('custom')">⬇ Exportar CSV</button>
+<button class="btn btn-export btn-sm" onclick="exportarXlsx('custom')">⬇ Exportar Excel</button>
+      </div>
+      <div class="tbl-wrap" id="tblCustom"></div>
+      <div class="pag" id="pagCustom"></div>
+    </div>
+  </div>
+
+</div>
+  </section>
+
+  <div class="rodape-credito">Central iGreen · Desenvolvido por <b>jennifer.silveira@igreenenergy.com.br</b> · iGreen Energy · 2026</div>
+
+  </main>
+</div>
+
+<script>
+/* ================================================================
+   CENTRAL iGREEN — Desenvolvido por jennifer.silveira@igreenenergy.com.br
+   ================================================================ */
+const CREDITO = "Desenvolvido por jennifer.silveira@igreenenergy.com.br · iGreen Energy · 2026";
+
+/* ---------- navegação ---------- */
+document.querySelectorAll('[data-pg]').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const pg = el.dataset.pg;
+    document.querySelectorAll('.pagina').forEach(p=>p.classList.remove('ativa'));
+    document.getElementById('pg-'+pg).classList.add('ativa');
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('ativo', b.dataset.pg===pg));
+    window.scrollTo({top:0});
+  });
+});
+
+/* ---------- utilitários ---------- */
+function norm(s){return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
+function achaCol(headers, candidatos){
+  const h = headers.map(norm);
+  for(const c of candidatos){
+    const i = h.findIndex(x=>x===norm(c));
+    if(i>=0) return headers[i];
+  }
+  for(const c of candidatos){
+    const i = h.findIndex(x=>x.includes(norm(c)));
+    if(i>=0) return headers[i];
+  }
+  return null;
+}
+function parseDur(v){ // "HH:MM:SS", "MM:SS" ou segundos → segundos
+  if(v==null) return 0;
+  const s = String(v).trim();
+  if(!s) return 0;
+  if(/^\d+([.,]\d+)?$/.test(s)) return Math.round(parseFloat(s.replace(',','.')));
+  const p = s.split(':').map(x=>parseInt(x,10)||0);
+  if(p.length===3) return p[0]*3600+p[1]*60+p[2];
+  if(p.length===2) return p[0]*60+p[1];
+  return 0;
+}
+function fmtDur(seg){
+  seg = Math.max(0, Math.round(seg));
+  const h=Math.floor(seg/3600), m=Math.floor((seg%3600)/60), s=seg%60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function fmtDurNeg(seg){ return (seg<0?'-':'')+fmtDur(Math.abs(seg)); }
+function soDigitos(v){ return String(v==null?'':v).replace(/\D/g,''); }
+function fmtCPF(v){
+  let d = soDigitos(v);
+  if(!d) return '';
+  if(d.length>11) d = d.slice(-11);
+  d = d.padStart(11,'0');
+  return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
+}
+function limpaCelular(v){
+  let d = soDigitos(v);
+  if(d.length===13 && d.startsWith('55')) d = d.slice(2);
+  if(d.length===12 && d.startsWith('55')) d = d.slice(2);
+  return d;
+}
+function parseData(v){ // DD/MM/AAAA ou AAAA-MM-DD (com ou sem hora)
+  if(v==null) return null;
+  const s = String(v).trim().split(' ')[0].split('T')[0];
+  let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(m) return new Date(+m[3], +m[2]-1, +m[1]);
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  return null;
+}
+function fmtDataBR(d){
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+function lerCSV(file){
+  return new Promise((res,rej)=>{
+    Papa.parse(file,{header:true,skipEmptyLines:true,encoding:'utf-8',
+      complete:r=>res(r.data), error:rej});
+  });
+}
+function msg(id, tipo, html){
+  const el = document.getElementById(id);
+  el.className = 'status-msg mostra '+tipo;
+  el.innerHTML = html;
+}
+function limpaMsg(id){ document.getElementById(id).className='status-msg'; }
+function setupDrop(dropId, inputId, onFiles){
+  const drop = document.getElementById(dropId), input = document.getElementById(inputId);
+  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over');});
+  drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');onFiles([...e.dataTransfer.files]);});
+  input.addEventListener('change',()=>{onFiles([...input.files]);input.value='';});
+}
+function baixaXLSX(wb, nome){ XLSX.writeFile(wb, nome); }
+function xlsxPronto(){
+  if(typeof XLSX==='undefined'){
+    alert('A biblioteca de Excel ainda está carregando (verifique sua internet) e tente novamente em alguns segundos.');
+    return false;
+  }
+  return true;
+}
+/* ===== motor de formatação dos Excel (cores, zebrado, status, explicações) ===== */
+const XCOR = {verdeEsc:'1D8A4F', verdeNoite:'0B3D24', verdeClaro:'D6F0E3', txtVerde:'065F46',
+  amarelo:'FEF3C7', txtAmarelo:'92400E', vermelho:'FEE2E2', txtVermelho:'991B1B',
+  zebra:'EFF7F2', titulo:'0B3D24', explic:'52705F'};
+const XB = {style:'thin', color:{rgb:'C9DED2'}};
+const XBORDA = {top:XB,bottom:XB,left:XB,right:XB};
+function estilizaPlanilha(ws, dados, opts){
+  opts = opts||{};
+  const nCols = opts.cols || Math.max(1, ...dados.map(r=>(r&&r.length)||1));
+  const headerRows = new Set(opts.headerRows||[]);
+  const explicRows = new Set(opts.explicRows||[]);
+  const dataStart = opts.dataStart!=null ? opts.dataStart :
+    (opts.headerRows&&opts.headerRows.length ? Math.max(...opts.headerRows)+1 : 3);
+  const merges = ws['!merges'] = ws['!merges']||[];
+  const alturas = ws['!rows'] = ws['!rows']||[];
+  let zebraIdx = 0;
+  for(let r=0;r<dados.length;r++){
+    const linha = dados[r]||[];
+    const ehCredito = r===0;
+    const ehTitulo  = opts.titleRow===r;
+    const ehSecao   = typeof linha[0]==='string' && String(linha[0]).startsWith('▶');
+    if((ehCredito||ehTitulo||explicRows.has(r)||ehSecao) && nCols>1)
+      merges.push({s:{r,c:0},e:{r,c:nCols-1}});
+    alturas[r] = {hpt: ehTitulo?24 : ehCredito?16 : explicRows.has(r)?13 : headerRows.has(r)?26 : 16};
+    if(r>=dataStart && !ehSecao && linha.length) zebraIdx++;
+    for(let c=0;c<nCols;c++){
+      const addr = XLSX.utils.encode_cell({r,c});
+      let cel = ws[addr];
+      if(!cel){
+        if(ehCredito||ehTitulo||explicRows.has(r)||ehSecao||headerRows.has(r)||(r>=dataStart&&linha.length))
+          cel = ws[addr] = {t:'s', v:''};
+        else continue;
+      }
+      const v = String(cel.v==null?'':cel.v);
+      let s = null;
+      if(ehCredito)          s={font:{bold:true,sz:9,color:{rgb:'7CE0A8'}},fill:{fgColor:{rgb:XCOR.verdeNoite}},alignment:{vertical:'center'}};
+      else if(ehTitulo)      s={font:{bold:true,sz:13,color:{rgb:XCOR.titulo}},alignment:{vertical:'center'}};
+      else if(explicRows.has(r)) s={font:{italic:true,sz:8.5,color:{rgb:XCOR.explic}},alignment:{vertical:'center'}};
+      else if(headerRows.has(r)) s={font:{bold:true,sz:9.5,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:XCOR.verdeEsc}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:XBORDA};
+      else if(ehSecao)       s={font:{bold:true,sz:10.5,color:{rgb:XCOR.txtVerde}},fill:{fgColor:{rgb:XCOR.verdeClaro}},alignment:{vertical:'center'}};
+      else if(r>=dataStart && linha.length){
+        s={font:{sz:9.5},border:XBORDA,alignment:{vertical:'center'}};
+        if(opts.zebra!==false && zebraIdx%2===0) s.fill={fgColor:{rgb:XCOR.zebra}};
+        if(/🟢|✅/.test(v))      { s.fill={fgColor:{rgb:XCOR.verdeClaro}}; s.font={sz:9.5,bold:true,color:{rgb:XCOR.txtVerde}}; }
+        else if(/🟡|⚠️|⚠/.test(v)) { s.fill={fgColor:{rgb:XCOR.amarelo}};   s.font={sz:9.5,bold:true,color:{rgb:XCOR.txtAmarelo}}; }
+        else if(/🔴/.test(v))     { s.fill={fgColor:{rgb:XCOR.vermelho}};  s.font={sz:9.5,bold:true,color:{rgb:XCOR.txtVermelho}}; }
+      }
+      if(s) cel.s = s;
+    }
+  }
+  return ws;
+}
+function abaBonita(dados, larguras, opts){
+  const ws = XLSX.utils.aoa_to_sheet(dados);
+  if(larguras) ws['!cols'] = larguras.map(w=>({wch:w}));
+  return estilizaPlanilha(ws, dados, opts);
+}
+function abaComCredito(dados, larguras, opts){
+  return abaBonita(dados, larguras, Object.assign({headerRows:[2], dataStart:3}, opts||{}));
+}
+
+/* ================================================================
+   1) ANÁLISE TIMES & MEET CALL
+   ================================================================ */
+const PAUSAS_PRODUTIVAS = ['chat','respondendo chat','chatwoot','feedback','reuniao','treinamento','ticket','abertura de ticket','atualizando boletos','assistencia pleno','ajuste da folha de ponto'];
+const EXCECOES_TIME = [
+  {contem:'luciano santiago', time:'Time Luciano'},
+  {contem:'aline cristine',   time:'Meet Call'},
+  {contem:'wynara',           time:'Time Tamires'}
+];
+function timeDaCampanha(camp){
+  const c = norm(camp);
+  if(c.includes('comerc')) return 'Time Luciano';
+  if(c.includes('aza')) return 'Time Tamires';
+  if(c.includes('ivolt') || c.includes('fit mutir') || (c.includes('fornecedora') && c.includes('inad'))) return 'Time Déborah';
+  return 'Meet Call';
+}
+function ehPausaProdutiva(tipo){
+  const t = norm(tipo);
+  return PAUSAS_PRODUTIVAS.some(p=>t.includes(p));
+}
+function ehNQ(qual){
+  const q = norm(qual);
+  if(!q) return true;
+  return q.includes('nao qualific') || q==='sem qualificacao';
+}
+function statusNQ(pct){ return pct<=10 ? '🟢 OK' : (pct<=20 ? '🟡 Atenção' : '🔴 Analisar'); }
+function statusTPA(seg){ return seg<=600 ? '🟢 OK' : (seg<=1500 ? '🟡 Atenção' : '🔴 Analisar'); }
+function statusIntervalo(seg){ return seg<=7200 ? '🟢 OK' : (seg<=9000 ? '🟡 Atenção' : '🔴 Analisar'); }
+function statusManual(difSeg){
+  if(difSeg<=0) return '✅ OK';
+  if(difSeg<=60) return '⚠️ Verificar';
+  if(difSeg<=300) return '🟡 Atenção';
+  return '🔴 Analisar';
+}
+function pesoStatusManual(dif){ return dif>300?3 : dif>60?2 : dif>0?1 : 0; }
+
+let anLig = null, anProds = [], anPausas = [];
+function anAtualizaBotao(){
+  document.getElementById('btn-an-gerar').disabled = !(anLig && anProds.length>0);
+}
+setupDrop('drop-an-lig','file-an-lig', async files=>{
+  anLig = await lerCSV(files[0]);
+  const drop = document.getElementById('drop-an-lig');
+  drop.classList.add('ok'); drop.firstChild.textContent = '✅ '+files[0].name+' ('+anLig.length+' ligações)';
+  // preenche data a partir do CSV
+  const headers = Object.keys(anLig[0]||{});
+  const cData = achaCol(headers,['call_date','data','date']);
+  if(cData){
+    const cont = {};
+    for(const r of anLig){ const d = parseData(r[cData]); if(d){ const k = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); cont[k]=(cont[k]||0)+1; } }
+    const top = Object.entries(cont).sort((a,b)=>b[1]-a[1])[0];
+    if(top) document.getElementById('an-data').value = top[0];
+  }
+  anAtualizaBotao();
+});
+function removeProd(i){ anProds.splice(i,1); renderLista('lista-an-prod',anProds,removeProd); if(!anProds.length) document.getElementById('drop-an-prod').classList.remove('ok'); anAtualizaBotao(); }
+function removePausa(i){ anPausas.splice(i,1); renderLista('lista-an-pausa',anPausas,removePausa); if(!anPausas.length) document.getElementById('drop-an-pausa').classList.remove('ok'); }
+setupDrop('drop-an-prod','file-an-prod', async files=>{
+  for(const f of files) anProds.push({nome:f.name, dados:await lerCSV(f)});
+  renderLista('lista-an-prod', anProds, removeProd);
+  document.getElementById('drop-an-prod').classList.add('ok');
+  anAtualizaBotao();
+});
+setupDrop('drop-an-pausa','file-an-pausa', async files=>{
+  for(const f of files) anPausas.push({nome:f.name, dados:await lerCSV(f)});
+  renderLista('lista-an-pausa', anPausas, removePausa);
+  document.getElementById('drop-an-pausa').classList.add('ok');
+});
+function renderLista(id, arr, onRemove){
+  const el = document.getElementById(id);
+  el.innerHTML = arr.map((a,i)=>`<div><span>📄 ${a.nome} (${a.dados.length} linhas)</span><span class="x" data-i="${i}">✕</span></div>`).join('');
+  el.querySelectorAll('.x').forEach(x=>x.addEventListener('click',e=>onRemove(+e.target.dataset.i)));
+}
+
+document.getElementById('btn-an-gerar').addEventListener('click', ()=>{
+  try{ processaAnalise(); }
+  catch(e){ msg('an-msg','erro','❌ Erro ao processar: '+e.message); console.error(e); }
+});
+
+function processaAnalise(){
+  if(!xlsxPronto()) return;
+  limpaMsg('an-msg');
+  const hL = Object.keys(anLig[0]||{});
+  const cAgente = achaCol(hL,['agent_name','agente','agent']);
+  const cCamp   = achaCol(hL,['campaign_name','campanha','campaign']);
+  const cQual   = achaCol(hL,['qualification_name','qualificacao','qualification']);
+  const cIdent  = achaCol(hL,['identifier','identificador']);
+  const cModo   = achaCol(hL,['call_mode','modo']);
+  const cFala   = achaCol(hL,['speaking_with_agent_time','speaking','tempo_falado']);
+  const cNum    = achaCol(hL,['number','record_name','numero','telefone','phone']);
+  if(!cAgente || !cCamp) throw new Error('CSV de ligações sem colunas agent_name/campaign_name.');
+
+  // ---- agrega ligações por agente ----
+  const ag = {}; // nome -> dados
+  function pega(nome){
+    if(!ag[nome]) ag[nome]={nome, total:0, m15:0, nq:0, idVazio:0, campanhas:{}, manualLigSeg:0, tpaSeg:0, intervaloSeg:0, pausaProdSeg:0, temPausa:false, temProd:false};
+    return ag[nome];
+  }
+  for(const r of anLig){
+    const nome = String(r[cAgente]||'').trim();
+    if(!nome) continue;
+    const a = pega(nome);
+    a.total++;
+    const fala = parseDur(cFala ? r[cFala] : 0);
+    if(fala>=15) a.m15++;
+    if(ehNQ(cQual ? r[cQual] : '')) a.nq++;
+    if(!soDigitos(cIdent ? r[cIdent] : '')) a.idVazio++;
+    const t = timeDaCampanha(cCamp ? r[cCamp] : '');
+    a.campanhas[t] = (a.campanhas[t]||0)+1;
+    // ligação manual com número
+    const modo = norm(cModo ? r[cModo] : '');
+    const temNumero = cNum ? soDigitos(r[cNum]).length>=8 : true;
+    if(modo.includes('manual') && temNumero) a.manualLigSeg += fala;
+  }
+
+  // ---- produtividade ----
+  for(const p of anProds){
+    const hP = Object.keys(p.dados[0]||{});
+    const pAg  = achaCol(hP,['agent_name','agente','agent','nome']);
+    const pMan = achaCol(hP,['manual']);
+    const pInt = achaCol(hP,['interval','intervalo']);
+    const pAcw = achaCol(hP,['acw','tpa']);
+    if(!pAg) continue;
+    for(const r of p.dados){
+      const nome = String(r[pAg]||'').trim();
+      if(!nome) continue;
+      const a = pega(nome);
+      a.temProd = true;
+      a.manualProdSeg = (a.manualProdSeg||0) + parseDur(pMan?r[pMan]:0);
+      a.intervaloSeg += parseDur(pInt?r[pInt]:0);
+      a.tpaSeg       += parseDur(pAcw?r[pAcw]:0);
+    }
+  }
+
+  // ---- pausas individuais (opcionais) ----
+  for(const p of anPausas){
+    const hP = Object.keys(p.dados[0]||{});
+    const pAg  = achaCol(hP,['agent','agente','agent_name','nome']);
+    const pTipo= achaCol(hP,['interval','tipo','pausa','pause']);
+    const pDur = achaCol(hP,['duration','duracao']);
+    if(!pAg||!pTipo||!pDur) continue;
+    for(const r of p.dados){
+      const nome = String(r[pAg]||'').trim();
+      if(!nome || !ag[nome]) continue;
+      if(ehPausaProdutiva(r[pTipo])){
+        ag[nome].pausaProdSeg += parseDur(r[pDur]);
+        ag[nome].temPausa = true;
+      }
+    }
+  }
+
+  // ---- classifica time por agente (maioria das campanhas + exceções) ----
+  const agentes = Object.values(ag);
+  for(const a of agentes){
+    let time = 'Meet Call', max = -1;
+    for(const [t,q] of Object.entries(a.campanhas)) if(q>max){max=q; time=t;}
+    const n = norm(a.nome);
+    for(const ex of EXCECOES_TIME) if(n.includes(ex.contem)) time = ex.time;
+    a.time = time;
+    a.intervaloLiquido = a.temPausa ? Math.max(0, a.intervaloSeg - a.pausaProdSeg) : a.intervaloSeg;
+    a.manualProdSeg = a.manualProdSeg||0;
+    a.difManual = a.manualProdSeg - a.manualLigSeg;
+    a.pctNQ = a.total ? (a.nq/a.total*100) : 0;
+    a.pctID = a.total ? (a.idVazio/a.total*100) : 0;
+  }
+
+  // ---- média de NQ por time ----
+  const times = {};
+  for(const a of agentes){ (times[a.time]=times[a.time]||[]).push(a); }
+  const mediaNQ = {};
+  for(const [t,arr] of Object.entries(times)) mediaNQ[t] = arr.reduce((s,a)=>s+a.pctNQ,0)/arr.length;
+
+  const dataStr = (document.getElementById('an-data').value||'').trim().replace('/','-') || 'dia';
+  const diaTxt = document.getElementById('an-data').value || '';
+
+  const EXPL_TIMES = [
+    'ℹ️ 📵 Não Qualificadas: 🟢 até 10% · 🟡 11–20% · 🔴 acima de 20% (Analisar) — identifica possíveis fraudes em atendimentos.',
+    'ℹ️ ⏱️ TPA (pós-atendimento): 🟢 até 10min · 🟡 10–25min · 🔴 acima de 25min (Analisar) · ☕ Intervalo: 🟢 até 2h · 🟡 2h–2h30 · 🔴 acima de 2h30 (Analisar).',
+    'ℹ️ Intervalo permitido: Pausa 1 (15min) + Almoço (1h) + Pausa 2 (15min) + Banheiro/água (30min) = 2h. Pausas produtivas (Chat, Feedback, Reunião, Treinamento, Ticket etc.) não contam como intervalo.'
+  ];
+  const EXPL_MANUAL = [
+    'ℹ️ Compara o tempo em modo manual (relatório de produtividade) com o tempo real de ligações manuais com número discado.',
+    'ℹ️ Diferença = tempo em manual sem ligar (possível fraude de produtividade).',
+    'ℹ️ ✅ OK (dif ≤ 0) · ⚠️ Verificar (até 1min) · 🟡 Atenção (1–5min) · 🔴 Analisar (acima de 5min). Times ordenados do mais crítico ao mais leve.'
+  ];
+  const OPTS_ABA = {titleRow:1, explicRows:[3,4,5], headerRows:[7], dataStart:8};
+  function cabecalhoAba(titulo, expl){
+    return [[CREDITO],[titulo],[],...expl.map(e=>[e]),[]];
+  }
+
+  // ---- monta linhas padrão ----
+  const CAB = ['Colaborador','Total Ligações','Ligações ≥15s','Não Qualificadas','% Não Qualificadas','vs. Média do Time','Status Não Qualificada','ID Vazio (CPF)','% ID Vazio','TPA (Pós Atendimento)','Status TPA','Tempo de Intervalo','Status Intervalo'];
+  const LARG = [28,13,13,15,17,16,20,13,10,19,14,17,16];
+  function linhaAgente(a){
+    return [a.nome, a.total, a.m15, a.nq, a.pctNQ.toFixed(1).replace('.',',')+'%',
+      ((a.pctNQ-mediaNQ[a.time])>=0?'+':'')+(a.pctNQ-mediaNQ[a.time]).toFixed(1).replace('.',',')+' p.p.',
+      statusNQ(a.pctNQ), a.idVazio, a.pctID.toFixed(1).replace('.',',')+'%',
+      a.temProd? fmtDur(a.tpaSeg):'—', a.temProd? statusTPA(a.tpaSeg):'—',
+      a.temProd? fmtDur(a.intervaloLiquido)+(a.temPausa?' (líquido)':''):'—',
+      a.temProd? statusIntervalo(a.intervaloLiquido):'—'];
+  }
+  function abaTime(nomeTime, arr){
+    const dados = [...cabecalhoAba('📊 '+nomeTime+' — Análise do dia '+diaTxt, EXPL_TIMES), CAB];
+    arr.sort((a,b)=>b.pctNQ-a.pctNQ).forEach(a=>dados.push(linhaAgente(a)));
+    return abaBonita(dados, LARG, OPTS_ABA);
+  }
+  const CAB_MAN = ['Colaborador','Time','Tempo Manual (Produtividade)','Tempo Ligações Manuais','Diferença (manual sem ligar)','Status'];
+  const LARG_MAN = [28,16,24,22,24,14];
+  function abaManual(timesIncluidos, rotulo){
+    const arr = agentes.filter(a=>a.temProd && timesIncluidos.includes(a.time));
+    // times do mais crítico ao mais leve
+    const porTime = {};
+    for(const a of arr) (porTime[a.time]=porTime[a.time]||[]).push(a);
+    const ordemTimes = Object.keys(porTime).sort((t1,t2)=>{
+      const c=t=>porTime[t].reduce((s,a)=>s+pesoStatusManual(a.difManual),0);
+      return c(t2)-c(t1);
+    });
+    const dados = [...cabecalhoAba('⚠️ Análise Manual ('+rotulo+') — dia '+diaTxt, EXPL_MANUAL), CAB_MAN];
+    for(const t of ordemTimes){
+      dados.push([]); dados.push(['▶ '+t.toUpperCase()]);
+      porTime[t].sort((a,b)=>b.difManual-a.difManual).forEach(a=>{
+        dados.push([a.nome, a.time, fmtDur(a.manualProdSeg), fmtDur(a.manualLigSeg), fmtDurNeg(a.difManual), statusManual(a.difManual)]);
+      });
+    }
+    return abaBonita(dados, LARG_MAN, OPTS_ABA);
+  }
+
+  const timesIG = ['Time Luciano','Time Tamires','Time Déborah'];
+  const igreen = agentes.filter(a=>timesIG.includes(a.time));
+  const meet   = agentes.filter(a=>a.time==='Meet Call');
+
+  // ---- workbook iGreen ----
+  const wb1 = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb1, abaManual(timesIG,'iGreen'), 'Análise Manual');
+  const dadosGeral = [...cabecalhoAba('📊 Geral iGreen — Análise do dia '+diaTxt, EXPL_TIMES), ['Time',...CAB]];
+  igreen.sort((a,b)=> a.time===b.time ? b.pctNQ-a.pctNQ : a.time.localeCompare(b.time))
+        .forEach(a=>dadosGeral.push([a.time, ...linhaAgente(a)]));
+  XLSX.utils.book_append_sheet(wb1, abaBonita(dadosGeral,[16,...LARG],OPTS_ABA), 'Geral');
+  for(const t of timesIG){
+    XLSX.utils.book_append_sheet(wb1, abaTime(t, (times[t]||[]).slice()), t);
+  }
+  baixaXLSX(wb1, 'Analise_Times_'+dataStr+'.xlsx');
+
+  // ---- workbook Meet Call ----
+  const wb2 = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2, abaManual(['Meet Call'],'Meet Call'), 'Análise Manual');
+  XLSX.utils.book_append_sheet(wb2, abaTime('Meet Call', meet.slice()), 'Time Meet Call');
+  baixaXLSX(wb2, 'Analise_MeetCall_'+dataStr+'.xlsx');
+
+  // ---- resumo na tela + textos padrão ----
+  function resumoTexto(rotulo, arr){
+    const nq10 = arr.filter(a=>a.pctNQ>10 && a.pctNQ<=20).length;
+    const nq20 = arr.filter(a=>a.pctNQ>20).length;
+    const tpaA = arr.filter(a=>a.temProd && a.tpaSeg>1500).length;
+    const intA = arr.filter(a=>a.temProd && a.intervaloLiquido>9000).length;
+    const dia  = document.getElementById('an-data').value || '';
+    return `📊 ${rotulo} — Análise do dia ${dia}\n`+
+      `📵 Não Qualificadas: ${nq20>0? nq20+' colaborador(es) acima de 20% 🔴 (analisar)':'nenhum caso para analisar 🔴'}${nq10>0?' · '+nq10+' em ponto de atenção 🟡':''}\n`+
+      `⏱️ TPA: ${tpaA>0? tpaA+' caso(s) acima de 25min para analisar 🔴':'dentro do esperado 🟢'}\n`+
+      `☕ Intervalo: ${intA>0? intA+' caso(s) acima de 2h30 para analisar 🔴':'dentro do limite de 2h 🟢'}`;
+  }
+  const kpi = (v,l)=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+  document.getElementById('an-resultado').innerHTML =
+    `<div class="kpis">${kpi(agentes.length,'colaboradores')}${kpi(igreen.length,'iGreen')}${kpi(meet.length,'Meet Call')}${kpi(agentes.filter(a=>a.pctNQ>20).length,'NQ 🔴 analisar')}${kpi(agentes.filter(a=>a.temProd&&a.difManual>300).length,'Manual 🔴 analisar')}</div>
+    <div class="card"><h3>📝 Resumo textual (sem nomes) — copie e cole</h3>
+    <pre style="white-space:pre-wrap;font-size:12.5px;color:var(--texto2);line-height:1.7;margin-top:8px">${resumoTexto('iGreen',igreen)}\n\n${resumoTexto('Meet Call',meet)}</pre></div>`;
+
+  msg('an-msg','ok', `✅ Arquivos gerados: <b>Analise_Times_${dataStr}.xlsx</b> e <b>Analise_MeetCall_${dataStr}.xlsx</b> · ${agentes.length} colaboradores processados`+
+    (anPausas.length? ' · intervalo líquido aplicado a quem tem CSV de pausa':' · sem CSVs de pausa (intervalo bruto)'));
+}
+
+/* ================================================================
+   2) DESEMPENHO POR AGENTE
+   ================================================================ */
+let deLig=null, deProd=null, deDados=null;
+setupDrop('drop-de-lig','file-de-lig', async files=>{
+  deLig = await lerCSV(files[0]);
+  const d=document.getElementById('drop-de-lig'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+deLig.length+' ligações)';
+  document.getElementById('btn-de-gerar').disabled = false;
+});
+setupDrop('drop-de-prod','file-de-prod', async files=>{
+  deProd = await lerCSV(files[0]);
+  const d=document.getElementById('drop-de-prod'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name;
+});
+document.getElementById('btn-de-gerar').addEventListener('click',()=>{
+  try{
+    limpaMsg('de-msg');
+    const h = Object.keys(deLig[0]||{});
+    const cAg=achaCol(h,['agent_name','agente']), cFala=achaCol(h,['speaking_with_agent_time','speaking']),
+          cModo=achaCol(h,['call_mode','modo']), cNum=achaCol(h,['number','record_name','telefone']);
+    if(!cAg) throw new Error('CSV sem coluna agent_name.');
+    const ag={};
+    for(const r of deLig){
+      const n=String(r[cAg]||'').trim(); if(!n) continue;
+      const a = ag[n]=ag[n]||{nome:n,total:0,m15:0,manualLig:0,manualProd:null};
+      a.total++;
+      const f=parseDur(cFala?r[cFala]:0);
+      if(f>=15) a.m15++;
+      const modo=norm(cModo?r[cModo]:''), temNum=cNum? soDigitos(r[cNum]).length>=8 : true;
+      if(modo.includes('manual')&&temNum) a.manualLig+=f;
+    }
+    if(deProd){
+      const hp=Object.keys(deProd[0]||{});
+      const pAg=achaCol(hp,['agent_name','agente','nome']), pMan=achaCol(hp,['manual']);
+      if(pAg&&pMan) for(const r of deProd){
+        const n=String(r[pAg]||'').trim();
+        if(ag[n]) ag[n].manualProd=(ag[n].manualProd||0)+parseDur(r[pMan]);
+      }
+    }
+    deDados = Object.values(ag).sort((a,b)=>b.m15-a.m15);
+    const tot=deDados.reduce((s,a)=>s+a.total,0), tot15=deDados.reduce((s,a)=>s+a.m15,0);
+    const kpi=(v,l)=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+    document.getElementById('de-kpis').innerHTML=`<div class="kpis">${kpi(deDados.length,'agentes')}${kpi(tot.toLocaleString('pt-BR'),'ligações')}${kpi(tot15.toLocaleString('pt-BR'),'≥15s')}${kpi((tot?tot15/tot*100:0).toFixed(1).replace('.',',')+'%','% ≥15s geral')}</div>`;
+    let html='<div class="tabela-wrap"><table><tr><th>#</th><th>Agente</th><th>Total</th><th>≥15s</th><th>% ≥15s</th><th>Manual (Prod.)</th><th>Lig. Manuais</th><th>Diferença</th><th>Status</th></tr>';
+    deDados.forEach((a,i)=>{
+      const dif = a.manualProd!=null ? a.manualProd-a.manualLig : null;
+      const st  = dif==null?'<span class="chip cinza">—</span>':
+        dif>300?'<span class="chip vermelho">🔴 Analisar</span>':dif>60?'<span class="chip amarelo">🟡 Atenção</span>':dif>0?'<span class="chip amarelo">⚠️ Verificar</span>':'<span class="chip verde">✅ OK</span>';
+      html+=`<tr><td>${i+1}</td><td>${a.nome}</td><td class="num">${a.total}</td><td class="num">${a.m15}</td><td class="num">${(a.total?a.m15/a.total*100:0).toFixed(1).replace('.',',')}%</td><td class="num">${a.manualProd!=null?fmtDur(a.manualProd):'—'}</td><td class="num">${fmtDur(a.manualLig)}</td><td class="num">${dif!=null?fmtDurNeg(dif):'—'}</td><td>${st}</td></tr>`;
+    });
+    document.getElementById('de-tabela').innerHTML=html+'</table></div>';
+    document.getElementById('btn-de-excel').style.display='inline-block';
+    msg('de-msg','ok','✅ Desempenho gerado para '+deDados.length+' agentes.'+(deProd?'':' Envie o CSV de produtividade para calcular a coluna Diferença.'));
+  }catch(e){ msg('de-msg','erro','❌ '+e.message); }
+});
+document.getElementById('btn-de-excel').addEventListener('click',()=>{
+  const dados=[[CREDITO],['📈 Desempenho por Agente'],
+    ['ℹ️ Ligações ≥15s indicam conversas reais. Diferença = manual (produtividade) − tempo em ligações manuais com número: ✅ OK (≤0) · ⚠️ Verificar (até 1min) · 🟡 Atenção (1–5min) · 🔴 Analisar (>5min).'],
+    [],['#','Agente','Total Ligações','Ligações ≥15s','% ≥15s','Manual (Produtividade)','Tempo Lig. Manuais','Diferença','Status']];
+  deDados.forEach((a,i)=>{
+    const dif=a.manualProd!=null?a.manualProd-a.manualLig:null;
+    dados.push([i+1,a.nome,a.total,a.m15,(a.total?a.m15/a.total*100:0).toFixed(1).replace('.',',')+'%',
+      a.manualProd!=null?fmtDur(a.manualProd):'—',fmtDur(a.manualLig),dif!=null?fmtDurNeg(dif):'—',
+      dif==null?'—':dif>300?'🔴 Analisar':dif>60?'🟡 Atenção':dif>0?'⚠️ Verificar':'✅ OK']);
+  });
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, abaBonita(dados,[5,28,14,14,10,22,18,14,14],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Desempenho');
+  baixaXLSX(wb,'Desempenho_iGreen.xlsx');
+});
+
+/* ================================================================
+   5) CONVERSÃO PÓS-CONTATO (ligações × pagos)
+   ================================================================ */
+let cvLig=null, cvPagos=null, cvResultado=null, cvPorQual=null, cvResumo=null;
+function parseValorBR(v){
+  if(v==null) return 0;
+  let s=String(v).replace(/[R$\s]/g,'');
+  if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.');
+  const n=parseFloat(s);
+  return isNaN(n)?0:n;
+}
+function fmtBRL(n){
+  return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function cvAtualizaBotao(){ document.getElementById('btn-cv-gerar').disabled = !(cvLig && cvPagos); }
+setupDrop('drop-cv-lig','file-cv-lig', async files=>{
+  cvLig = await lerCSV(files[0]);
+  const d=document.getElementById('drop-cv-lig'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+cvLig.length+' ligações)';
+  // popula filtro de agentes
+  const h=Object.keys(cvLig[0]||{}); const cAg=achaCol(h,['agent_name','agente']);
+  if(cAg){
+    const nomes=[...new Set(cvLig.map(r=>String(r[cAg]||'').trim()).filter(Boolean))].sort();
+    document.getElementById('cv-agente').innerHTML='<option value="">Todos os agentes</option>'+nomes.map(n=>`<option>${n}</option>`).join('');
+  }
+  cvAtualizaBotao();
+});
+setupDrop('drop-cv-pagos','file-cv-pagos', async files=>{
+  const f=files[0];
+  if(/\.xlsx?$/i.test(f.name)){
+    const buf=await f.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:false});
+    cvPagos=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+  } else cvPagos=await lerCSV(f);
+  const d=document.getElementById('drop-cv-pagos'); d.classList.add('ok'); d.firstChild.textContent='✅ '+f.name+' ('+cvPagos.length+' pagamentos)';
+  cvAtualizaBotao();
+});
+document.getElementById('btn-cv-gerar').addEventListener('click',()=>{
+  try{ processaConversao(); }
+  catch(e){ msg('cv-msg','erro','❌ '+e.message); console.error(e); }
+});
+function processaConversao(){
+  limpaMsg('cv-msg');
+  const minSeg = Math.max(0, parseInt(document.getElementById('cv-min').value)||0);
+  const filtroAgente = document.getElementById('cv-agente').value;
+
+  // ---- ligações: agrupa por CPF ----
+  const hL=Object.keys(cvLig[0]||{});
+  const cAg=achaCol(hL,['agent_name','agente']), cQual=achaCol(hL,['qualification_name','qualificacao']),
+        cIdent=achaCol(hL,['identifier','identificador','cpf']), cData=achaCol(hL,['call_date','data']),
+        cFala=achaCol(hL,['speaking_with_agent_time','speaking']);
+  if(!cIdent) throw new Error('CSV de ligações sem coluna identifier (CPF).');
+  const contatos={}; let ligSemCpf=0, ligDescartadas=0;
+  for(const r of cvLig){
+    if(filtroAgente && String(r[cAg]||'').trim()!==filtroAgente) continue;
+    const fala=parseDur(cFala?r[cFala]:0);
+    if(fala<minSeg){ ligDescartadas++; continue; }
+    const cpf=soDigitos(r[cIdent]);
+    if(!cpf){ ligSemCpf++; continue; }
+    const c = contatos[cpf]=contatos[cpf]||{cpf, contatos:0, qual:'', dataContato:null, agente:''};
+    c.contatos++;
+    const q=String(cQual?r[cQual]:'').trim();
+    if(q) c.qual=q; // guarda a última qualificação não vazia
+    if(cAg && !c.agente) c.agente=String(r[cAg]||'').trim();
+    const d=parseData(cData?r[cData]:null);
+    if(d && (!c.dataContato || d<c.dataContato)) c.dataContato=d; // primeiro contato
+  }
+  const cpfsContato=Object.keys(contatos);
+  if(!cpfsContato.length) throw new Error('Nenhum cliente com CPF nas ligações após os filtros.');
+
+  // ---- pagos: agrupa por CPF ----
+  const hP=Object.keys(cvPagos[0]||{});
+  const pCpf=achaCol(hP,['cpf']), pVal=achaCol(hP,['valorapagar','valor a pagar','valor']),
+        pData=achaCol(hP,['dtpagamento','dt. pagamento','data pagamento','pagamento']),
+        pCli=achaCol(hP,['cliente','nome']);
+  if(!pCpf) throw new Error('Planilha de pagos sem coluna cpf.');
+  const pagosPorCpf={};
+  for(const r of cvPagos){
+    const cpf=soDigitos(r[pCpf]); if(!cpf) continue;
+    (pagosPorCpf[cpf]=pagosPorCpf[cpf]||[]).push({
+      valor: parseValorBR(pVal?r[pVal]:0),
+      data: parseData(pData?r[pData]:null),
+      cliente: pCli?String(r[pCli]||'').trim():''
+    });
+  }
+
+  // ---- cruzamento ----
+  const linhas=[];
+  let nApos=0, nAntes=0, nNao=0, valorApos=0;
+  for(const cpf of cpfsContato){
+    const c=contatos[cpf];
+    const pagos=pagosPorCpf[cpf]||[];
+    let status, dataPgto=null, dias=null, valor=0, cliente='';
+    if(pagos.length){
+      cliente = pagos.find(p=>p.cliente)?.cliente||'';
+      const apos = c.dataContato ? pagos.filter(p=>p.data && p.data>=c.dataContato) : pagos;
+      if(apos.length){
+        status='🟢 Pagou após contato'; nApos++;
+        valor=apos.reduce((s,p)=>s+p.valor,0); valorApos+=valor;
+        dataPgto=apos.reduce((m,p)=>!m||p.data<m?p.data:m,null);
+        if(c.dataContato&&dataPgto) dias=Math.round((dataPgto-c.dataContato)/86400000);
+      } else {
+        status='🔵 Pagou antes do contato'; nAntes++;
+        valor=pagos.reduce((s,p)=>s+p.valor,0);
+        dataPgto=pagos.reduce((m,p)=>!m||(p.data&&p.data<m)?p.data:m,null);
+      }
+    } else { status='🔴 Não pagou'; nNao++; }
+    linhas.push({cliente,cpf:fmtCPF(cpf),qual:c.qual||'(sem qualificação)',agente:c.agente,contatos:c.contatos,
+      dataContato:c.dataContato?fmtDataBR(c.dataContato):'—',status,
+      dataPgto:dataPgto?fmtDataBR(dataPgto):'—',dias:dias!=null?dias:'—',valor});
+  }
+  // ordena: pagou após (maior valor) → não pagou → pagou antes
+  const peso=s=>s.startsWith('🟢')?0:s.startsWith('🔴')?1:2;
+  linhas.sort((a,b)=> peso(a.status)-peso(b.status) || b.valor-a.valor);
+
+  // ---- por qualificação ----
+  const porQual={};
+  for(const l of linhas){
+    const q=porQual[l.qual]=porQual[l.qual]||{qual:l.qual,contatados:0,pagaram:0,valor:0};
+    q.contatados++;
+    if(l.status.startsWith('🟢')){ q.pagaram++; q.valor+=l.valor; }
+  }
+  cvPorQual=Object.values(porQual).sort((a,b)=>b.valor-a.valor);
+
+  const total=linhas.length, taxa= total? nApos/total*100:0;
+  cvResultado=linhas;
+  cvResumo={total,nApos,nAntes,nNao,taxa,valorApos,minSeg,filtroAgente};
+
+  // ---- tela ----
+  const kpi=(v,l)=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+  document.getElementById('cv-kpis').innerHTML=`<div class="kpis">
+    ${kpi(total.toLocaleString('pt-BR'),'clientes contatados')}
+    ${kpi(nApos.toLocaleString('pt-BR'),'🟢 pagaram após contato')}
+    ${kpi(taxa.toFixed(1).replace('.',',')+'%','taxa de conversão')}
+    ${kpi(fmtBRL(valorApos),'valor recuperado')}
+    ${kpi(nNao.toLocaleString('pt-BR'),'🔴 não pagaram')}
+    ${kpi(nAntes.toLocaleString('pt-BR'),'🔵 pagaram antes')}</div>`;
+  let hq='<div class="card"><h3>📌 Resultado por Qualificação</h3><div class="tabela-wrap" style="margin-top:10px"><table><tr><th>Qualificação</th><th>Contatados</th><th>Pagaram após</th><th>% Conversão</th><th>Valor Recuperado</th></tr>';
+  cvPorQual.forEach(q=>{
+    hq+=`<tr><td>${q.qual}</td><td class="num">${q.contatados}</td><td class="num">${q.pagaram}</td><td class="num">${(q.contatados?q.pagaram/q.contatados*100:0).toFixed(1).replace('.',',')}%</td><td class="num">${fmtBRL(q.valor)}</td></tr>`;
+  });
+  document.getElementById('cv-qual').innerHTML=hq+'</table></div></div>';
+  let ht='<div class="tabela-wrap"><table><tr><th>Cliente</th><th>CPF</th><th>Qualificação</th><th>Contatos</th><th>Data Contato</th><th>Status</th><th>Data Pgto</th><th>Dias até pagar</th><th>Valor</th></tr>';
+  linhas.slice(0,150).forEach(l=>{
+    const chip=l.status.startsWith('🟢')?'verde':l.status.startsWith('🔴')?'vermelho':'cinza';
+    ht+=`<tr><td>${l.cliente||'—'}</td><td>${l.cpf}</td><td>${l.qual}</td><td class="num">${l.contatos}</td><td>${l.dataContato}</td><td><span class="chip ${chip}">${l.status}</span></td><td>${l.dataPgto}</td><td class="num">${l.dias}</td><td class="num">${l.valor?fmtBRL(l.valor):'—'}</td></tr>`;
+  });
+  ht+='</table></div>'+(linhas.length>150?`<p class="sub" style="margin-top:8px">Mostrando 150 de ${linhas.length} — o Excel contém todos.</p>`:'');
+  document.getElementById('cv-tabela').innerHTML=ht;
+  document.getElementById('btn-cv-excel').style.display='inline-block';
+  msg('cv-msg','ok',`✅ Cruzamento concluído: ${total} clientes contatados${minSeg?` (fala ≥${minSeg}s)`:''}${filtroAgente?` · agente: ${filtroAgente}`:''} · ${nApos} pagaram após o contato (${taxa.toFixed(1).replace('.',',')}%) · ${fmtBRL(valorApos)} recuperados.`+(ligSemCpf?` · ${ligSemCpf} ligações sem CPF ignoradas`:''));
+}
+document.getElementById('btn-cv-excel').addEventListener('click',()=>{
+  const r=cvResumo;
+  const resumo=[[CREDITO],[],['RESUMO — CONVERSÃO PÓS-CONTATO'],
+    ['Filtro de fala mínima', r.minSeg+'s'],
+    ['Agente', r.filtroAgente||'Todos'],
+    ['Clientes contatados', r.total],
+    ['🟢 Pagaram após o contato', r.nApos],
+    ['Taxa de conversão', r.taxa.toFixed(1).replace('.',',')+'%'],
+    ['Valor recuperado', fmtBRL(r.valorApos)],
+    ['🔴 Não pagaram', r.nNao],
+    ['🔵 Pagaram antes do contato', r.nAntes],
+    [],['POR QUALIFICAÇÃO'],
+    ['Qualificação','Contatados','Pagaram após','% Conversão','Valor Recuperado']];
+  cvPorQual.forEach(q=>resumo.push([q.qual,q.contatados,q.pagaram,(q.contatados?q.pagaram/q.contatados*100:0).toFixed(1).replace('.',',')+'%',fmtBRL(q.valor)]));
+  const clientes=[[CREDITO],['🎯 Conversão Pós-Contato — Clientes'],
+    ['ℹ️ Cruzamento por CPF entre as ligações do dia e a base de pagos. 🟢 Pagou após contato = pagamento na data do 1º contato ou depois (conta como conversão) · 🔵 Pagou antes = já tinha pago · 🔴 Não pagou.'],
+    [],['Cliente','CPF','Qualificação','Agente','Contatos','Data Contato','Status','Data Pagamento','Dias até pagar','Valor Pago']];
+  cvResultado.forEach(l=>clientes.push([l.cliente,l.cpf,l.qual,l.agente,l.contatos,l.dataContato,l.status,l.dataPgto,l.dias,l.valor?fmtBRL(l.valor):'']));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, abaBonita(resumo,[32,16,15,13,18],{titleRow:2,headerRows:[12,13],dataStart:3,zebra:false}),'Resumo');
+  XLSX.utils.book_append_sheet(wb, abaBonita(clientes,[30,17,26,24,10,13,24,15,13,14],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Clientes');
+  const hoje=new Date();
+  baixaXLSX(wb,'Conversao_PosContato_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx');
+});
+
+/* ================================================================
+   6) CALCULADORA DO ATENDENTE
+   ================================================================ */
+let eqLista = [];
+function num(id){ return parseFloat(document.getElementById(id).value)||0; }
+function ptsFmt(n){ return n.toLocaleString('pt-BR',{maximumFractionDigits:0}); }
+function parseMonitorias(txt){
+  return String(txt||'').split(/[,;]/).map(s=>parseFloat(s.trim().replace('%','').replace(',','.'))).filter(n=>!isNaN(n));
+}
+function calcMonitoria(notas, ptsBase, pts100){
+  if(!notas.length) return {pts:0, media:0, todas100:false, detalhe:'sem notas'};
+  const media = notas.reduce((s,n)=>s+n,0)/notas.length;
+  const todas100 = notas.every(n=>n>=100);
+  if(todas100) return {pts:pts100, media:100, todas100:true, detalhe:'100% em todas → bônus'};
+  return {pts: media/100*ptsBase, media, todas100:false, detalhe: media.toFixed(1).replace('.',',')+'% de média'};
+}
+function linhaBreak(rotulo, detalhe, pts, destaque){
+  return `<tr><td>${rotulo}</td><td style="color:var(--texto2)">${detalhe}</td><td class="num" style="${destaque?'color:var(--verde-claro);font-weight:700':''}">${ptsFmt(pts)} pts</td></tr>`;
+}
+function calculaAtendente(){
+  const nome=document.getElementById('at-nome').value.trim()||'Atendente';
+  const meta=num('at-meta'), real=num('at-real');
+  const proMeta=num('at-prometa'), proReal=num('at-proreal');
+  const mult=num('pr-mult')||1.2;
+  // recebidos: proporcional (bateu = cheio, passou = mais)
+  const ptsRec = meta>0 ? real/meta*num('pr-at-rec') : 0;
+  // promessa: se tiver meta, proporcional; sem meta, valor cheio se teve promessas pagas
+  const ptsPro = proMeta>0 ? proReal/proMeta*num('pr-at-pro') : (proReal>0 ? num('pr-at-pro') : 0);
+  const mon = calcMonitoria(parseMonitorias(document.getElementById('at-mon').value), num('pr-at-mon'), num('pr-at-mon100'));
+  const base = ptsRec+ptsPro+mon.pts;
+  const total = base*mult;
+  document.getElementById('at-resultado').innerHTML =
+    `<div class="tabela-wrap"><table>
+      ${linhaBreak('🎯 Recebidos', meta>0? ptsFmt(real)+' / '+ptsFmt(meta)+' ('+(real/meta*100).toFixed(1).replace('.',',')+'%)':'sem meta', ptsRec)}
+      ${linhaBreak('🤝 Promessas pagas', proMeta>0? proReal+' / '+proMeta : (proReal>0?'realizadas':'—'), ptsPro)}
+      ${linhaBreak('🎧 Monitoria', mon.detalhe, mon.pts, mon.todas100)}
+      ${linhaBreak('Subtotal (base)','', base)}
+      ${linhaBreak('✨ TOTAL ×'+String(mult).replace('.',','),'', total, true)}
+    </table></div>
+    <div class="linha-config" style="margin-top:10px"><button class="btn sec" onclick="addEquipe('${nome.replace(/'/g,'')}','Atendente',${base},${total})">➕ Adicionar à equipe</button></div>`;
+  return {nome, base, total};
+}
+function calculaPleno(){
+  const nome=document.getElementById('pl-nome').value.trim()||'Atendente Pleno';
+  const media=num('pl-media'), ref=num('pr-pl-ref')||5000;
+  const real=num('pl-real'), meta=num('pr-pl-meta')||35000;
+  const mult=num('pr-mult')||1.2;
+  const ptsMedia = ref>0 ? media/ref*num('pr-pl-med') : 0;
+  const mon = calcMonitoria(parseMonitorias(document.getElementById('pl-mon').value), num('pr-pl-mon'), num('pr-pl-mon100'));
+  const ptsRec = meta>0 ? real/meta*num('pr-pl-rec') : 0;
+  const extra = document.getElementById('pl-extra').checked ? 500 : 0;
+  const base = ptsMedia+mon.pts+ptsRec+extra;
+  const total = base*mult;
+  document.getElementById('pl-resultado').innerHTML =
+    `<div class="tabela-wrap"><table>
+      ${linhaBreak('👥 Média da equipe', ptsFmt(media)+' / '+ptsFmt(ref)+' pts de referência', ptsMedia)}
+      ${linhaBreak('🎧 Monitoria', mon.detalhe, mon.pts, mon.todas100)}
+      ${linhaBreak('🎯 Recebidos (meio período)', ptsFmt(real)+' / '+ptsFmt(meta)+' ('+(meta>0?(real/meta*100).toFixed(1).replace('.',','):'0')+'%)', ptsRec)}
+      ${extra? linhaBreak('🎁 Extra prometido em reunião','junho', extra):''}
+      ${linhaBreak('Subtotal (base)','', base)}
+      ${linhaBreak('✨ TOTAL ×'+String(mult).replace('.',','),'', total, true)}
+    </table></div>
+    <div class="linha-config" style="margin-top:10px"><button class="btn sec" onclick="addEquipe('${nome.replace(/'/g,'')}','Pleno',${base},${total})">➕ Adicionar à equipe</button></div>`;
+}
+function addEquipe(nome,tipo,base,total){
+  eqLista.push({nome,tipo,base,total});
+  renderEquipe();
+}
+function renderEquipe(){
+  const el=document.getElementById('eq-tabela');
+  document.getElementById('btn-eq-excel').disabled = !eqLista.length;
+  document.getElementById('btn-eq-limpar').disabled = !eqLista.length;
+  if(!eqLista.length){ el.innerHTML=''; document.getElementById('pl-media').value=''; return; }
+  // média base considera apenas atendentes comuns (a média da equipe que alimenta o pleno)
+  const comuns = eqLista.filter(e=>e.tipo==='Atendente');
+  const media = comuns.length ? comuns.reduce((s,e)=>s+e.base,0)/comuns.length : 0;
+  document.getElementById('pl-media').value = Math.round(media);
+  let h='<div class="tabela-wrap"><table><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Pontos Base</th><th>Total ×'+String(num('pr-mult')||1.2).replace('.',',')+'</th><th></th></tr>';
+  eqLista.forEach((e,i)=>{
+    h+=`<tr><td>${i+1}</td><td>${e.nome}</td><td>${e.tipo==='Pleno'?'⭐ Pleno':'👤 Atendente'}</td><td class="num">${ptsFmt(e.base)}</td><td class="num" style="color:var(--verde-claro);font-weight:700">${ptsFmt(e.total)}</td><td><span class="x" style="color:var(--vermelho);cursor:pointer" onclick="eqLista.splice(${i},1);renderEquipe()">✕</span></td></tr>`;
+  });
+  h+=`<tr><td></td><td><b>Média da equipe (atendentes)</b></td><td></td><td class="num"><b>${ptsFmt(media)}</b></td><td></td><td></td></tr>`;
+  el.innerHTML=h+'</table></div>';
+}
+document.getElementById('btn-at-calc').addEventListener('click',calculaAtendente);
+document.getElementById('btn-pl-calc').addEventListener('click',calculaPleno);
+document.getElementById('btn-eq-limpar').addEventListener('click',()=>{eqLista=[];renderEquipe();});
+document.getElementById('btn-eq-excel').addEventListener('click',()=>{
+  const mult=num('pr-mult')||1.2;
+  const dados=[[CREDITO],['🧮 Calculadora do Atendente — Pontuação do Mês'],
+    ['ℹ️ Bateu a meta = pontuação cheia; passou da meta = proporcional acima. Monitoria 100% em todas rende o bônus. Total final = pontos base × multiplicador.'],
+    [],['#','Nome','Tipo','Pontos Base','Total ×'+String(mult).replace('.',',')]];
+  eqLista.forEach((e,i)=>dados.push([i+1,e.nome,e.tipo,Math.round(e.base),Math.round(e.total)]));
+  const comuns=eqLista.filter(e=>e.tipo==='Atendente');
+  if(comuns.length) dados.push([],['','Média da equipe (atendentes)','',Math.round(comuns.reduce((s,e)=>s+e.base,0)/comuns.length),'']);
+  dados.push([],['▶ PARÂMETROS UTILIZADOS'],
+    ['Atendente','Recebidos '+num('pr-at-rec')+' pts · Promessa '+num('pr-at-pro')+' pts · Monitoria '+num('pr-at-mon')+' pts ('+num('pr-at-mon100')+' se 100% em todas)'],
+    ['Pleno','Média equipe '+num('pr-pl-med')+' pts (ref. '+num('pr-pl-ref')+') · Monitoria '+num('pr-pl-mon')+' pts ('+num('pr-pl-mon100')+' se 100% em todas) · Recebidos '+num('pr-pl-rec')+' pts (meta '+num('pr-pl-meta')+')'],
+    ['Multiplicador final','×'+String(mult).replace('.',',')]);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, abaBonita(dados,[5,30,14,14,14],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Pontuação');
+  const hoje=new Date();
+  baixaXLSX(wb,'Pontuacao_Atendentes_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx');
+});
+
+/* ================================================================
+   3) DISPARO 3C+
+   ================================================================ */
+let d3cDados=null;
+setupDrop('drop-3c','file-3c', async files=>{
+  d3cDados = await lerCSV(files[0]);
+  const d=document.getElementById('drop-3c'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+d3cDados.length+' ligações)';
+  document.getElementById('btn-3c-gerar').disabled=false;
+});
+document.getElementById('btn-3c-gerar').addEventListener('click',()=>{
+  try{
+    limpaMsg('d3c-msg');
+    const h=Object.keys(d3cDados[0]||{});
+    const cQual=achaCol(h,['qualification_name','qualificacao']), cIdent=achaCol(h,['identifier','identificador']),
+          cRec=achaCol(h,['record_name']), cNum=achaCol(h,['number','numero','telefone','phone']);
+    if(!cQual) throw new Error('CSV sem coluna qualification_name.');
+    const vistos=new Set(), saida=[];
+    for(const r of d3cDados){
+      const q=norm(r[cQual]);
+      if(!(q.includes('promessa de pagamento')||q.includes('solicitou 2'))) continue;
+      let cel='';
+      if(cRec && r[cRec]){
+        const m=String(r[cRec]).match(/(\d{11})\s*-/); // 11 dígitos antes do hífen
+        if(m) cel=m[1];
+      }
+      if(!cel && cNum) cel=limpaCelular(r[cNum]);
+      if(!cel && cRec) cel=limpaCelular(r[cRec]);
+      const cpf=fmtCPF(cIdent?r[cIdent]:'');
+      if(!cel && !cpf) continue;
+      const chave=cel+'|'+cpf;
+      if(vistos.has(chave)) continue;
+      vistos.add(chave);
+      saida.push([cel,cpf]);
+    }
+    if(!saida.length) throw new Error('Nenhuma ligação com "Promessa de Pagamento" ou "Solicitou 2ª via" encontrada.');
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, abaBonita([[CREDITO],['📤 Disparo 3C+'],
+      ['ℹ️ Ligações qualificadas como "Promessa de Pagamento" ou "Solicitou 2ª via", sem duplicados. Celular extraído do record_name/number e CPF do identifier.'],
+      [],['Celular','CPF'],...saida],[16,18],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Disparo');
+    const hoje=new Date(), nome='Disparo_3Cplus_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx';
+    baixaXLSX(wb,nome);
+    let html='<div class="tabela-wrap"><table><tr><th>Celular</th><th>CPF</th></tr>';
+    saida.slice(0,80).forEach(l=>html+=`<tr><td>${l[0]}</td><td>${l[1]}</td></tr>`);
+    html+='</table></div>'+(saida.length>80?`<p class="sub" style="margin-top:8px">Mostrando 80 de ${saida.length} — o Excel contém todos.</p>`:'');
+    document.getElementById('d3c-tabela').innerHTML=html;
+    msg('d3c-msg','ok','✅ <b>'+nome+'</b> gerado com '+saida.length+' contatos únicos (Promessa de Pagamento + Solicitou 2ª via).');
+  }catch(e){ msg('d3c-msg','erro','❌ '+e.message); }
+});
+
+/* ================================================================
+   4) DISPARO LUCIANO
+   ================================================================ */
+let luDados=null;
+setupDrop('drop-lu','file-lu', async files=>{
+  const f=files[0];
+  if(/\.xlsx?$/i.test(f.name)){
+    const buf=await f.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    luDados=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+  } else luDados=await lerCSV(f);
+  const d=document.getElementById('drop-lu'); d.classList.add('ok'); d.firstChild.textContent='✅ '+f.name+' ('+luDados.length+' linhas)';
+  document.getElementById('btn-lu-gerar').disabled=false;
+});
+document.getElementById('btn-lu-gerar').addEventListener('click',()=>{
+  try{
+    limpaMsg('lu-msg');
+    let min=Math.max(3,parseInt(document.getElementById('lu-min').value)||3);
+    document.getElementById('lu-min').value=min; // trava: nunca menos de 3 dias
+    const max=parseInt(document.getElementById('lu-max').value)||30;
+    const limite=parseInt(document.getElementById('lu-limite').value)||5000;
+    const h=Object.keys(luDados[0]||{});
+    const cCpf=achaCol(h,['cpf']), cCel=achaCol(h,['celular','telefone','phone']),
+          cVenc=achaCol(h,['cdatavencoriginal','dtvencimento','vencimento','venc. original','dt. vencimento']),
+          cVal=achaCol(h,['valorapagar','valor a pagar','valor']),
+          cCli=achaCol(h,['cliente','nome']);
+    if(!cCpf||!cVenc) throw new Error('Base sem colunas de CPF e/ou data de vencimento (cdatavencoriginal/dtvencimento).');
+    const hoje=new Date(); hoje.setHours(0,0,0,0);
+    // agrupa por CPF
+    const porCpf={};
+    for(const r of luDados){
+      const cpf=soDigitos(r[cCpf]); if(!cpf) continue;
+      (porCpf[cpf]=porCpf[cpf]||[]).push(r);
+    }
+    const saida=[];
+    for(const [cpf,boletos] of Object.entries(porCpf)){
+      if(boletos.length!==1) continue; // cliente puro: exatamente 1 boleto
+      const r=boletos[0];
+      const dv=parseData(r[cVenc]); if(!dv) continue;
+      const dias=Math.floor((hoje-dv)/86400000);
+      if(dias<min||dias>max) continue;
+      const cel=limpaCelular(cCel?r[cCel]:''); if(!cel) continue;
+      saida.push([cel, fmtCPF(cpf), cCli?String(r[cCli]||'').trim():'', dias, cVal?String(r[cVal]||'').replace('.',','):'' ]);
+      if(saida.length>=limite) break;
+    }
+    if(!saida.length) throw new Error('Nenhum cliente atende às regras (1 boleto, '+min+'–'+max+' dias vencidos).');
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, abaBonita([[CREDITO],['📤 Disparo Luciano'],
+      ['ℹ️ Clientes puros com exatamente 1 boleto, vencido entre '+min+' e '+max+' dias, limitado a '+limite+' clientes. ⚠️ Regra obrigatória: nunca disparar para menos de 3 dias vencidos — sem exceções.'],
+      [],['Celular','CPF','Cliente','Dias Vencidos','Valor a Pagar'],...saida],[16,18,32,14,14],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Disparo Luciano');
+    const nome='Disparo_Luciano_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx';
+    baixaXLSX(wb,nome);
+    let html='<div class="tabela-wrap"><table><tr><th>Celular</th><th>CPF</th><th>Cliente</th><th>Dias Vencidos</th><th>Valor</th></tr>';
+    saida.slice(0,80).forEach(l=>html+=`<tr><td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td><td class="num">${l[3]}</td><td class="num">${l[4]}</td></tr>`);
+    html+='</table></div>'+(saida.length>80?`<p class="sub" style="margin-top:8px">Mostrando 80 de ${saida.length} — o Excel contém todos.</p>`:'');
+    document.getElementById('lu-tabela').innerHTML=html;
+    msg('lu-msg','ok','✅ <b>'+nome+'</b> gerado com '+saida.length+' clientes (1 boleto · '+min+'–'+max+' dias vencidos · limite '+limite+').');
+  }catch(e){ msg('lu-msg','erro','❌ '+e.message); }
+});
+</script>
+<script>
+(function(){
+
+/* ══════════════════════════════════════════════
+   ESTADO
+══════════════════════════════════════════════ */
+const state = {
+  rows: [],
+  baseTotal: [],
+  listas: { ajust: [], umbol: [], base: [], bape: [], custom: [] },
+  paginas: { ajust: 1, umbol: 1, base: 1, bape: 1, custom: 1 },
+  PP: 50,
+  cpfs3c: new Set(),
+};
+
+const TABS = ['ajust','umbol','base','bape','custom'];
+
+/* ══════════════════════════════════════════════
+   UPLOAD PLANILHA BASE
+══════════════════════════════════════════════ */
+const arquivosAcumulados = [];
+
+function onDrop(ev) {
+  ev.preventDefault();
+  document.getElementById('uploadArea').classList.remove('dragover');
+  const novos = [...ev.dataTransfer.files].filter(f => f.name.match(/\.(xlsx|xls|csv)$/i));
+  if (!novos.length) { alert('Por favor envie arquivos .xlsx, .xls ou .csv'); return; }
+  adicionarArquivos(novos);
+}
+
+function onFileSelect(ev) {
+  const novos = [...ev.target.files];
+  if (!novos.length) return;
+  adicionarArquivos(novos);
+  ev.target.value = '';
+}
+
+function adicionarArquivos(novos) {
+  for (const f of novos) {
+    if (!arquivosAcumulados.find(a => a.name === f.name)) arquivosAcumulados.push(f);
+  }
+  if (arquivosAcumulados.length > 2) arquivosAcumulados.splice(0, arquivosAcumulados.length - 2);
+  lerArquivos([...arquivosAcumulados]);
+}
+
+function lerArquivos(files) {
+  setProgress(true, 'Lendo arquivos...');
+  document.getElementById('uploadFn').innerHTML = '';
+  document.getElementById('btnProcessar').disabled = true;
+  document.getElementById('chipsDetectadas').innerHTML = '';
+
+  const resultados = new Array(files.length).fill(null);
+  let concluidos = 0;
+
+  function aoTerminar(idx, file, rows) {
+    resultados[idx] = { file, rows };
+    logMsg(`✔ ${file.name}: ${rows.length.toLocaleString('pt-BR')} linhas`, 'ok');
+    concluidos++;
+    if (concluidos < files.length) return;
+
+    const todasLinhas = resultados.flatMap(r => r.rows);
+    state.rows = todasLinhas;
+    setProgress(false);
+    document.getElementById('uploadArea').classList.add('has-file');
+
+    if (files.length === 1) {
+      document.getElementById('uploadFn').innerHTML =
+        `✔ ${resultados[0].file.name} — ${resultados[0].rows.length.toLocaleString('pt-BR')} linhas`;
+    } else {
+      document.getElementById('uploadFn').innerHTML =
+        `✔ ${resultados[0].file.name} — ${resultados[0].rows.length.toLocaleString('pt-BR')} linhas<br>` +
+        `✔ ${resultados[1].file.name} — ${resultados[1].rows.length.toLocaleString('pt-BR')} linhas<br>` +
+        `<span style="color:#166B41;font-size:.85em;">▶ Total unificado: ${todasLinhas.length.toLocaleString('pt-BR')} linhas</span>`;
+    }
+
+    logMsg(`✔ Total unificado: ${todasLinhas.length.toLocaleString('pt-BR')} linhas`, 'ok');
+    mostrarChipsConcessionarias(todasLinhas);
+    document.getElementById('btnProcessar').disabled = false;
+  }
+
+  files.forEach((file, idx) => {
+    logMsg(`📂 Carregando: ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`);
+    const reader = new FileReader();
+    reader.onerror = () => { setProgress(false); logMsg(`✗ Erro ao ler ${file.name}`, 'err'); };
+
+    const isCsv = file.name.match(/\.csv$/i);
+
+    reader.onload = (e) => {
+      setProgressPct(30 + idx * 30, `Interpretando ${file.name}...`);
+      setTimeout(() => {
+        try {
+          let rows;
+          if (isCsv) {
+            rows = parsearCsvBase(e.target.result);
+          } else {
+            const data = new Uint8Array(e.target.result);
+            const wb   = XLSX.read(data, { type: 'array', cellDates: true, dense: false });
+            const ws   = wb.Sheets[wb.SheetNames[0]];
+            rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          }
+          aoTerminar(idx, file, rows);
+        } catch(err) {
+          setProgress(false);
+          logMsg(`✗ Erro ao interpretar ${file.name}: ${err.message}`, 'err');
+        }
+      }, 50);
+    };
+
+    if (isCsv) {
+      reader.readAsText(file, 'utf-8');
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
+  });
+}
+
+
+/* ══════════════════════════════════════════════
+   PARSER CSV BASE ENERGIZADOS
+   Detecta separador (vírgula ou ponto-e-vírgula)
+   Retorna array de objetos com as colunas como chaves
+══════════════════════════════════════════════ */
+function parsearCsvBase(text) {
+  // Remove BOM UTF-8 se presente
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+  const linhas = text.split(/\r?\n/);
+  if (linhas.length < 2) return [];
+
+  // Detectar separador: conta vírgulas e ponto-e-vírgulas na primeira linha
+  const primeiraLinha = linhas[0];
+  const qtdVirgula = (primeiraLinha.match(/,/g) || []).length;
+  const qtdPonto   = (primeiraLinha.match(/;/g) || []).length;
+  const sep = qtdPonto > qtdVirgula ? ';' : ',';
+
+  const headers = splitCsvLinha(primeiraLinha, sep).map(h => h.replace(/^"|"$/g,'').trim());
+
+  const rows = [];
+  for (let i = 1; i < linhas.length; i++) {
+    const linha = linhas[i].trim();
+    if (!linha) continue;
+    const cols = splitCsvLinha(linha, sep);
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = cols[idx] !== undefined ? cols[idx].replace(/^"|"$/g,'').trim() : ''; });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function splitCsvLinha(linha, sep) {
+  const result = [];
+  let cur = '', inQuote = false;
+  for (let i = 0; i < linha.length; i++) {
+    const ch = linha[i];
+    if (ch === '"') { inQuote = !inQuote; }
+    else if (ch === sep && !inQuote) { result.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function mostrarChipsConcessionarias(rows) {
+  const contagem = {};
+  rows.forEach(r => {
+    const c = String(r['concessionaria'] || r['Concessionaria'] || '').trim();
+    if (c) contagem[c] = (contagem[c] || 0) + 1;
+  });
+  const chips = document.getElementById('chipsDetectadas');
+  chips.innerHTML = '';
+  Object.entries(contagem).forEach(([nome, qtd]) => {
+    const c = document.createElement('span');
+    c.className = 'chip';
+    c.innerHTML = `${nome} <span class="chip-count">${qtd.toLocaleString('pt-BR')}</span>`;
+    chips.appendChild(c);
+  });
+  if (!Object.keys(contagem).length) {
+    logMsg('⚠ Coluna "concessionaria" não encontrada no arquivo.', 'warn');
+  }
+}
+
+/* ══════════════════════════════════════════════
+   UPLOAD 3C+ — CSV de contatos realizados
+══════════════════════════════════════════════ */
+const TABUL_REMOVER = [
+  'promessa de pagamento',
+  'solicitou a 2Â° via',
+  'solicitou a 2º via',
+  'solicitou a 2 via',
+  'pago',
+  'nÃ£o Ã© titular',
+  'nao e titular',
+  'não é titular',
+  'cliente que paga em atraso',
+  'desmembramento / ticket',
+  'parcelamento / unificaÃ§Ã£o',
+  'parcelamento / unificação',
+  'falecido',
+  'fraude',
+];
+
+function normTabul(s) { return String(s||'').toLowerCase().trim(); }
+function tabularRemover(qual) {
+  const n = normTabul(qual);
+  return TABUL_REMOVER.some(t => n === t || n.includes(t));
+}
+
+function onDrop3c(ev) {
+  ev.preventDefault();
+  document.getElementById('upload3cArea').classList.remove('dragover');
+  const file = ev.dataTransfer.files[0];
+  if (file) lerCsv3c(file);
+}
+function onFileSelect3c(ev) {
+  const file = ev.target.files[0];
+  if (file) lerCsv3c(file);
+}
+
+function lerCsv3c(file) {
+  if (!file.name.match(/\.csv$/i)) { alert('Por favor envie um arquivo .csv'); return; }
+  logMsg(`📂 3C+: carregando ${file.name}...`);
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try { parsearCsv3c(e.target.result, file.name); }
+    catch(err) { logMsg(`✗ Erro ao ler CSV: ${err.message}`, 'err'); }
+  };
+  reader.onerror = () => logMsg('✗ Erro ao ler CSV 3C+', 'err');
+  reader.readAsText(file, 'latin1');
+}
+
+function parsearCsv3c(text, filename) {
+  const linhas = text.split(/\r?\n/);
+  if (!linhas.length) { logMsg('⚠ CSV vazio', 'warn'); return; }
+
+  const sep = linhas[0].includes(';') ? ';' : ',';
+  const cabecalho = linhas[0].split(sep).map(c => c.replace(/^"|"$/g,'').trim().toLowerCase());
+  const idxQual = cabecalho.findIndex(c => c.includes('qualification_name') || c.includes('qualificacao') || c.includes('qualificação'));
+  const idxId   = cabecalho.findIndex(c => c === 'identifie' || c === 'identifier' || c.includes('identifi'));
+
+  if (idxQual === -1) { logMsg('⚠ Coluna "qualification_name" não encontrada no CSV', 'warn'); return; }
+  if (idxId   === -1) { logMsg('⚠ Coluna "identifie" não encontrada no CSV', 'warn'); return; }
+
+  const cpfsRemover = new Set();
+  let totalLinhas = 0;
+
+  for (let i = 1; i < linhas.length; i++) {
+    const linha = linhas[i].trim();
+    if (!linha) continue;
+    totalLinhas++;
+    const cols = linha.split(sep).map(c => c.replace(/^"|"$/g,'').trim());
+    const qual = cols[idxQual] || '';
+    const cpf  = limparCpf(cols[idxId] || '');
+    if (cpf && tabularRemover(qual)) cpfsRemover.add(cpf);
+  }
+
+  state.cpfs3c = cpfsRemover;
+  document.getElementById('upload3cArea').classList.add('has-file');
+  document.getElementById('upload3cFn').textContent = `✔ ${filename}`;
+  document.getElementById('info3c').innerHTML =
+    `<span style="color:var(--vermelho);font-weight:700;">${cpfsRemover.size.toLocaleString('pt-BR')} CPFs</span> serão removidos das listas (de ${totalLinhas.toLocaleString('pt-BR')} linhas processadas)`;
+  logMsg(`✔ 3C+: ${cpfsRemover.size} CPFs para remover em ${totalLinhas} linhas`, 'ok');
+}
+
+/* ══════════════════════════════════════════════
+   PROCESSAMENTO PRINCIPAL
+══════════════════════════════════════════════ */
+function processarTudo() {
+  document.getElementById('log').classList.add('visible');
+  logMsg('⚙ Processando base iVolt...', 'ok');
+
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  state.baseTotal = [];
+
+  let ok = 0, semCpf = 0, semVenc = 0, semStatus = 0, bloqueados = 0;
+
+  // URLs bloqueadas: solatio e tinyurl
+  const URLS_BLOQUEADAS = ['solatio', 'tinyurl', 'tiny'];
+
+  state.rows.forEach(row => {
+    // CPF — aceita cpf / Cpf / CPF
+    const cpf = limparCpf(row['cpf'] ?? row['Cpf'] ?? row['CPF'] ?? '');
+    if (!cpf) { semCpf++; return; }
+
+    // Filtro status_financeiro: passa apenas VAZIO ou "Saldo"
+    const statusFin = String(row['status_financeiro'] ?? row['Status_financeiro'] ?? row['StatusFinanceiro'] ?? '').trim();
+    const statusFinNorm = statusFin.toLowerCase();
+    if (statusFinNorm !== '' && statusFinNorm !== 'saldo') { semStatus++; return; }
+
+    // Data de vencimento: usa cdatavencoriginal; fallback para dtvencimento
+    let dataVenc = parseData(row['cdatavencoriginal'] ?? row['Cdatavencoriginal'] ?? '');
+    if (!dataVenc) dataVenc = parseData(row['dtvencimento'] ?? row['Dtvencimento'] ?? '');
+    if (!dataVenc) { semVenc++; return; }
+
+    // URL boleto bloqueada: solatio / tinyurl
+    const urlBol = String(row['urlboleto'] ?? row['Urlboleto'] ?? row['url_boleto'] ?? '').toLowerCase();
+    if (URLS_BLOQUEADAS.some(p => urlBol.includes(p))) { bloqueados++; return; }
+
+    // Valor = valorapagar + nvalordistribuidora (sempre soma)
+    const valorApagar = parseMoeda(row['valorapagar'] ?? row['Valorapagar'] ?? row['ValorAPagar'] ?? 0);
+    const valorDist   = parseMoeda(row['nvalordistribuidora'] ?? row['Nvalordistribuidora'] ?? row['ValorDistribuidora'] ?? 0);
+    const valorTotal  = valorApagar;
+
+    // Modalidade: SIM → Conta_Unica | NAO → Conta_Separada
+    const contaUnica = String(row['conta_unica'] ?? row['Conta_unica'] ?? '').trim().toUpperCase();
+    const modalidade = contaUnica === 'SIM' ? 'Conta_Unica' : contaUnica === 'NAO' ? 'Conta_Separada' : contaUnica;
+
+    // UF
+    const uf = String(row['uf'] ?? row['UF'] ?? row['Uf'] ?? '').trim().toUpperCase();
+
+    state.baseTotal.push({
+      cpf,
+      dataVencimento:  dataVenc,
+      dataReferencia:  parseData(row['mesreferencia'] ?? row['Mesreferencia'] ?? ''),
+      valorApagar,
+      valorDist,
+      valorTotal,
+      cliente:        String(row['cliente']        || row['Cliente']        || '').trim(),
+      idcliente:      String(row['idcliente']       || row['Idcliente']      || '').trim(),
+      instalacao:     String(row['numinstalacao']   || row['Numinstalacao']  || '').trim(),
+      celular:        String(row['celular']         || row['Celular']        || '').trim(),
+      email:          String(row['email']           || row['Email']          || '').trim(),
+      concessionaria: String(row['concessionaria']  || row['Concessionaria'] || '').trim(),
+      uf,
+      modalidade,
+    });
+    ok++;
+  });
+
+  logMsg(`✔ ${ok} linhas válidas | ${semCpf} sem CPF | ${semVenc} sem vencimento | ${semStatus} excluídos por status_financeiro${bloqueados > 0 ? ` | 🚫 ${bloqueados} removidos por URL (solatio/tinyurl)` : ''}`, 'ok');
+  gerarListas(hoje);
+  document.getElementById('statusTxt').textContent = `✔ Processado às ${new Date().toLocaleTimeString('pt-BR')}`;
+}
+
+/* ══════════════════════════════════════════════
+   GERAR LISTAS
+   - Ajustando : todos os vencidos (sem limite de dias), 1 por CPF (mais antigo)
+   - 1 Boleto  : 3–30 dias, exatamente 1 boleto
+   - Base Menor: 3–30 dias, 2+ boletos, 1 linha por CPF (mais antigo)
+   - BA e PE   : UF = BA ou PE, 3–45 dias, 1 linha por CPF (mais antigo)
+══════════════════════════════════════════════ */
+function gerarListas(hoje) {
+  const today = hoje || (() => { const d=new Date(); d.setHours(0,0,0,0); return d; })();
+
+  // Agrupar por CPF — todos os boletos por cliente
+  const porCpf = {};
+  state.baseTotal.forEach(r => {
+    if (!porCpf[r.cpf]) porCpf[r.cpf] = [];
+    porCpf[r.cpf].push(r);
+  });
+
+  // Base agregada: 1 registro por CPF com dados consolidados
+  const listaAgregada = [];
+
+  Object.entries(porCpf).forEach(([cpf, boletos]) => {
+    const vencidos = boletos.filter(b => b.dataVencimento < today);
+    if (!vencidos.length) return;
+
+    const ordenados   = [...vencidos].sort((a,b) => a.dataVencimento - b.dataVencimento);
+    const maisAntigo  = ordenados[0];
+    const diasVencidos = Math.floor((today - maisAntigo.dataVencimento) / 86400000) - 1;
+    const somaValor   = vencidos.reduce((s,b) => s + b.valorTotal, 0);
+    const qtdBoletos  = vencidos.length;
+    const rep         = maisAntigo;
+
+    listaAgregada.push({
+      'ID Cliente':    rep.idcliente,
+      Cpf:             cpf,
+      'Q. Boletos':    qtdBoletos,
+      Cliente:         rep.cliente,
+      Instalacao:      rep.instalacao,
+      'Dias Vencidos': diasVencidos,
+      Referencia:      rep.dataReferencia,
+      'Valor Total Debito': somaValor,
+      'R$ Distrib':    rep.valorDist,
+      cdatavencoriginal: rep.dataVencimento,
+      UF:              rep.uf,
+      Distribuidora:   rep.concessionaria,
+      Modalidade:      rep.modalidade,
+      Email:           rep.email,
+      Celular:         rep.celular,
+      _dias:           diasVencidos,
+      _uf:             rep.uf,
+    });
+  });
+
+  listaAgregada.sort((a,b) => b._dias - a._dias);
+
+  // Remover CPFs do 3C+
+  const semContato = state.cpfs3c.size > 0
+    ? listaAgregada.filter(r => !state.cpfs3c.has(limparCpf(r.Cpf)))
+    : listaAgregada;
+  if (state.cpfs3c.size > 0) logMsg(`🚫 3C+: ${listaAgregada.length - semContato.length} CPFs removidos por contato anterior`, 'ok');
+
+  // ── Ajustando: todos os vencidos (sem mínimo de dias)
+  const listaAjust = semContato;
+
+  // ── 1 Boleto: 3–30 dias, exatamente 1 boleto
+  const listaUmBol = semContato.filter(r => r._dias >= 3 && r._dias <= 30 && r['Q. Boletos'] === 1);
+
+  // ── Base Menor: 3–30 dias, 2+ boletos
+  const listaBase  = semContato.filter(r => r._dias >= 3 && r._dias <= 30 && r['Q. Boletos'] >= 2);
+
+  // ── Lista BA e PE: UF = BA ou PE, 3–45 dias
+  const listaBaPe  = semContato.filter(r => (r._uf === 'BA' || r._uf === 'PE') && r._dias >= 3 && r._dias <= 45);
+
+  state.listas = { ajust: listaAjust, umbol: listaUmBol, base: listaBase, bape: listaBaPe, custom: [], _baseSemLimite: semContato };
+
+  logMsg(`📋 Base Total: ${listaAjust.length} | 1 Boleto: ${listaUmBol.length} | Base Menor: ${listaBase.length} | BA e PE: ${listaBaPe.length}`, 'ok');
+
+  // Stats
+  document.getElementById('sTotal').textContent = listaAjust.length.toLocaleString('pt-BR');
+  document.getElementById('s1Bol').textContent  = listaUmBol.length.toLocaleString('pt-BR');
+  document.getElementById('sBase').textContent  = listaBase.length.toLocaleString('pt-BR');
+  document.getElementById('sBaPe').textContent  = listaBaPe.length.toLocaleString('pt-BR');
+  const somaGeral = listaAjust.reduce((s,r) => s + r['Valor Total Debito'], 0);
+  document.getElementById('sValor').textContent = fmtMoeda(somaGeral);
+
+  document.getElementById('badgeAjust').textContent  = listaAjust.length;
+  document.getElementById('badgeUmbol').textContent  = listaUmBol.length;
+  document.getElementById('badgeBase').textContent   = listaBase.length;
+  document.getElementById('badgeBape').textContent   = listaBaPe.length;
+
+  TABS.filter(t => t !== 'custom').forEach(t => { state.paginas[t] = 1; renderTabela(t); });
+  // Personalizado: limpa e aguarda o usuário escolher o filtro
+  state.listas.custom = [];
+  document.getElementById('badgeCustom').textContent = '0';
+  document.getElementById('customResumo').textContent = 'Defina os filtros acima e clique em Aplicar.';
+}
+
+/* ══════════════════════════════════════════════
+   COLUNAS DA TABELA
+══════════════════════════════════════════════ */
+const COLS = [
+  { key:'ID Cliente',         label:'ID Cliente'      },
+  { key:'Cpf',                label:'CPF'             },
+  { key:'Q. Boletos',         label:'Q. Boletos'      },
+  { key:'Cliente',            label:'Cliente'         },
+  { key:'Instalacao',         label:'Instalação'      },
+  { key:'Dias Vencidos',      label:'Dias Vencidos'   },
+  { key:'Referencia',         label:'Referência'      },
+  { key:'Valor Total Debito', label:'Valor Total'     },
+  { key:'cdatavencoriginal',  label:'Dt. Vencimento'  },
+  { key:'UF',                 label:'UF'              },
+  { key:'Distribuidora',      label:'Distribuidora'   },
+  { key:'R$ Distrib',         label:'R$ Distrib'      },
+  { key:'Modalidade',         label:'Modalidade'      },
+  { key:'Email',              label:'E-mail'          },
+  { key:'Celular',            label:'Celular'         },
+];
+
+function renderTabela(tab) {
+  const dados = state.listas[tab] || [];
+  const q = (document.getElementById(`search${capTab(tab)}`).value || '').toLowerCase();
+  const filtrado = q
+    ? dados.filter(r =>
+        String(r.Cpf||'').includes(q) ||
+        String(r.Cliente||'').toLowerCase().includes(q) ||
+        String(r.Instalacao||'').toLowerCase().includes(q) ||
+        String(r.Distribuidora||'').toLowerCase().includes(q) ||
+        String(r.UF||'').toLowerCase().includes(q))
+    : dados;
+
+  const pg    = state.paginas[tab];
+  const slice = filtrado.slice((pg-1)*state.PP, pg*state.PP);
+  const wrap  = document.getElementById(`tbl${capTab(tab)}`);
+
+  if (!slice.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>Nenhum registro encontrado.</p></div>`;
+    document.getElementById(`pag${capTab(tab)}`).innerHTML = '';
+    return;
+  }
+
+  const badgeClass = { ajust:'badge-ajust', umbol:'badge-1bol', base:'badge-base', bape:'badge-bape', custom:'badge-ajust' };
+  const thead = COLS.map(c => `<th>${c.label}</th>`).join('');
+  const tbody = slice.map(row => {
+    const badge = `<span class="badge ${badgeClass[tab]||'badge-ajust'}">${row._dias}d</span>`;
+    return `<tr>${COLS.map(c => {
+      let v = row[c.key];
+      if (c.key === 'Valor Total Debito' || c.key === 'R$ Distrib') v = fmtMoeda(v);
+      else if (c.key === 'cdatavencoriginal' || c.key === 'Referencia') v = fmtData(v);
+      else if (c.key === 'Dias Vencidos') v = badge;
+      else if (c.key === 'Cpf') v = fmtCpf(v);
+      return `<td>${v ?? ''}</td>`;
+    }).join('')}</tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+  renderPag(tab, filtrado.length);
+}
+
+function renderPag(tab, total) {
+  const pp  = state.PP;
+  const tot = Math.ceil(total / pp);
+  const pg  = state.paginas[tab];
+  const el  = document.getElementById(`pag${capTab(tab)}`);
+  if (tot <= 1) { el.innerHTML = ''; return; }
+  let h = `<span class="pag-info">${total.toLocaleString('pt-BR')} registros &nbsp;</span>`;
+  if (pg > 1) h += `<button class="pag-btn" onclick="irPag('${tab}',${pg-1})">‹</button>`;
+  for (let i = Math.max(1,pg-3); i <= Math.min(tot,pg+3); i++)
+    h += `<button class="pag-btn${i===pg?' active':''}" onclick="irPag('${tab}',${i})">${i}</button>`;
+  if (pg < tot) h += `<button class="pag-btn" onclick="irPag('${tab}',${pg+1})">›</button>`;
+  h += `<span class="pag-info">&nbsp;de ${tot} páginas</span>`;
+  el.innerHTML = h;
+}
+
+function irPag(tab, p) { state.paginas[tab] = p; renderTabela(tab); }
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tab}`));
+}
+
+/* ══════════════════════════════════════════════
+   EXPORTAR CSV
+   Ordem das colunas conforme POP:
+   ID Cliente | CPF | Q. Boletos | Cliente | Instalação |
+   Dias vencidos | Referência | Valor Total Debito |
+   Dt. Vencimento | UF | Distribuidora | R$ Distrib |
+   Modalidade | E_mail | Celular | Informações adicionais
+══════════════════════════════════════════════ */
+function exportarCsv(tab) {
+  const dados = state.listas[tab] || [];
+  if (!dados.length) { alert('Nenhum dado para exportar.'); return; }
+
+  const colsExport = [
+    'Identificador','ID Cliente','CPF','Q. Boletos','Cliente','Instalacao',
+    'Dias Vencidos','Referencia','Valor Total Debito',
+    'cdatavencoriginal','UF','Distribuidora','R$ Distrib',
+    'Modalidade','Email','Celular','Informações adicionais'
+  ];
+  const headersExport = [
+    'Identificador','ID Cliente','CPF','Q. Boletos','Cliente','Instalação',
+    'Dias vencidos','Referência','Valor Total Debito',
+    'cdatavencoriginal','UF','Distribuidora','R$ Distrib',
+    'Modalidade','E_mail','Celular','Informações adicionais'
+  ];
+
+  const cabecalho = headersExport.join(';');
+  const corpo = dados.map(r => {
+    return colsExport.map(c => {
+      let v;
+      if (c === 'Identificador')     v = fmtCpf(r.Cpf);
+      else if (c === 'CPF')          v = fmtCpf(r.Cpf);
+      else if (c === 'Referencia')   v = fmtData(r.Referencia);
+      else if (c === 'cdatavencoriginal') v = fmtData(r.cdatavencoriginal);
+      else if (c === 'Valor Total Debito' || c === 'R$ Distrib') {
+        const n = parseFloat(r[c] || 0);
+        v = isNaN(n) ? '' : fmtMoeda(n);
+      }
+      else if (c === 'Informações adicionais') v = '';
+      else v = r[c] ?? '';
+      v = String(v ?? '');
+      if (v.includes(';') || v.includes('"') || v.includes('\n')) v = '"' + v.replace(/"/g,'""') + '"';
+      return v;
+    }).join(';');
+  }).join('\n');
+
+  const tipoLabel = { ajust:'Base_Total', umbol:'1_Boleto', base:'Base_Menor', bape:'BA_e_PE', custom:'Personalizado' }[tab] || tab;
+  const nomeArquivo = `${tipoLabel}_${dtHoje()}.csv`;
+
+  const csvContent = '\uFEFF' + cabecalho + '\n' + corpo.trimEnd();
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = nomeArquivo; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  logMsg(`⬇ Exportado: ${nomeArquivo}`, 'ok');
+}
+
+/* ══════════════════════════════════════════════
+   LIMPAR
+══════════════════════════════════════════════ */
+function limparTudo() {
+  state.rows = []; state.baseTotal = []; state.cpfs3c = new Set();
+  arquivosAcumulados.length = 0;
+  state.listas = { ajust:[], umbol:[], base:[], bape:[], custom:[] };
+  state.paginas = { ajust:1, umbol:1, base:1, bape:1, custom:1 };
+  document.getElementById('uploadArea').classList.remove('has-file');
+  document.getElementById('uploadFn').textContent = '';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('file3cInput').value = '';
+  document.getElementById('upload3cArea').classList.remove('has-file');
+  document.getElementById('upload3cFn').textContent = '';
+  document.getElementById('info3c').textContent = '';
+  document.getElementById('chipsDetectadas').innerHTML = '';
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('log').classList.remove('visible');
+  document.getElementById('statusTxt').textContent = '';
+  document.getElementById('btnProcessar').disabled = true;
+  setProgress(false);
+  TABS.forEach(t => {
+    document.getElementById(`tbl${capTab(t)}`).innerHTML = '';
+    document.getElementById(`pag${capTab(t)}`).innerHTML = '';
+  });
+  ['sTotal','s1Bol','sBase','sBaPe'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('sValor').textContent = 'R$ 0,00';
+  ['badgeAjust','badgeUmbol','badgeBase','badgeBape','badgeCustom'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('customResumo').textContent = '';
+}
+
+/* ══════════════════════════════════════════════
+   FILTRO PERSONALIZADO
+══════════════════════════════════════════════ */
+function aplicarFiltroCustom() {
+  const diasMin  = parseInt(document.getElementById('customDiasMin').value)  || 0;
+  const diasMax  = parseInt(document.getElementById('customDiasMax').value);
+  const valorMin = parseFloat(document.getElementById('customValorMin').value) || 0;
+  const maxFinal = isNaN(diasMax) ? 9999 : diasMax;
+
+  const base = state.listas._baseSemLimite || [];
+  if (!base.length) return; // ainda não gerou listas, não faz nada
+
+  const filtrado = base.filter(r => {
+    if (r._dias < diasMin) return false;
+    if (r._dias > maxFinal) return false;
+    if (r['Valor Total Debito'] < valorMin) return false;
+    return true;
+  });
+
+  state.listas.custom = filtrado;
+  state.paginas.custom = 1;
+  document.getElementById('badgeCustom').textContent = filtrado.length;
+
+  const partesDias = [];
+  if (diasMin > 0) partesDias.push(`a partir de ${diasMin} dias`);
+  if (maxFinal < 9999) partesDias.push(`até ${maxFinal} dias`);
+  const parteDias  = partesDias.length ? partesDias.join(' ') : 'qualquer prazo';
+  const parteValor = valorMin > 0 ? ` · Valor Total ≥ ${fmtMoeda(valorMin)}` : '';
+  document.getElementById('customResumo').textContent =
+    `${filtrado.length.toLocaleString('pt-BR')} clientes encontrados — ${parteDias}${parteValor}`;
+
+  renderTabela('custom');
+}
+
+function resetarFiltroCustom() {
+  document.getElementById('customDiasMin').value  = '0';
+  document.getElementById('customDiasMax').value  = '9999';
+  document.getElementById('customValorMin').value = '0';
+  aplicarFiltroCustom();
+}
+
+/* ══════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════ */
+function setProgress(vis, label='') {
+  document.getElementById('progressWrap').classList.toggle('visible', vis);
+  document.getElementById('progressLabel').textContent = label;
+  if (!vis) document.getElementById('progressFill').style.width = '0%';
+}
+function setProgressPct(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+function limparCpf(v) { return String(v||'').replace(/\D/g,'').trim(); }
+function fmtCpf(v) {
+  const c = String(v||'').replace(/\D/g,'').padStart(11,'0');
+  return c.length===11 ? `${c.slice(0,3)}.${c.slice(3,6)}.${c.slice(6,9)}-${c.slice(9)}` : c;
+}
+
+function parseMoeda(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  if (typeof v === 'number') return v;
+  let s = String(v).replace(/[R$\s]/g,'').trim();
+  if (!s) return 0;
+  // Detecta formato:
+  // Brasileiro: 1.234,56 → ponto é milhar, vírgula é decimal
+  // Americano:  1234.56  → ponto é decimal
+  const temVirgula = s.includes(',');
+  const temPonto   = s.includes('.');
+  if (temVirgula && temPonto) {
+    // Ex: "1.234,56" — ponto é milhar, vírgula é decimal
+    s = s.replace(/\./g,'').replace(',','.');
+  } else if (temVirgula && !temPonto) {
+    // Ex: "1234,56" — vírgula é decimal
+    s = s.replace(',','.');
+  }
+  // Se só tem ponto (ex: "1234.56") deixa como está
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function parseData(v) {
+  if (!v) return null;
+  if (v instanceof Date) { const d=new Date(v); d.setHours(0,0,0,0); return d; }
+  const s = String(v).trim();
+  // Ignora valores claramente inválidos (números de cliente, UFs, URLs)
+  if (/^https?:\/\//i.test(s)) return null;
+  if (/^[A-Z]{2}$/.test(s)) return null;
+  if (/^\d{7,}$/.test(s) && !/^\d{8}$/.test(s)) return null;
+  let d;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const [dd,mm,yy] = s.split('/');
+    d = new Date(`${yy}-${mm}-${dd}T00:00:00`);
+  } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    d = new Date(s.slice(0,10)+'T00:00:00');
+  } else if (/^\d{8}$/.test(s)) {
+    // formato YYYYMMDD
+    d = new Date(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T00:00:00`);
+  } else {
+    d = new Date(s);
+  }
+  if (isNaN(d)) return null;
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function fmtMoeda(v) { return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function fmtData(v)  { if (!v) return ''; return v instanceof Date ? v.toLocaleDateString('pt-BR') : String(v); }
+function dtHoje()    { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
+
+// capTab: converte tab id para formato PascalCase para IDs dos elementos
+function capTab(s) {
+  const map = { ajust:'Ajust', umbol:'Umbol', base:'Base', bape:'Bape', custom:'Custom' };
+  return map[s] || s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function logMsg(msg, tipo='') {
+  const log = document.getElementById('log');
+  log.classList.add('visible');
+  const div = document.createElement('div');
+  div.className = tipo ? `log-${tipo}` : '';
+  div.textContent = `[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+
+function exportarXlsx(tab) {
+  const dados = state.listas[tab] || [];
+  if (!dados.length) { alert('Nenhum dado para exportar.'); return; }
+  const colsExport = ['Identificador','ID Cliente','CPF','Q. Boletos','Cliente','Instalacao','Dias Vencidos','Referencia','Valor Total Debito','cdatavencoriginal','UF','Distribuidora','R$ Distrib','Modalidade','Email','Celular','Informações adicionais'];
+  const headersExport = ['Identificador','ID Cliente','CPF','Q. Boletos','Cliente','Instalação','Dias vencidos','Referência','Valor Total Debito','cdatavencoriginal','UF','Distribuidora','R$ Distrib','Modalidade','E_mail','Celular','Informações adicionais'];
+  const tipoTitulo = { ajust:'Base Total (todos os vencidos, 1 por CPF)', umbol:'1 Boleto (3–30 dias)', base:'Base Menor (3–30 dias, 2+ boletos)', bape:'BA e PE (3–45 dias)', custom:'Personalizado' }[tab] || tab;
+  const aoa = [['Desenvolvido por jennifer.silveira@igreenenergy.com.br · iGreen Energy · 2026'],
+    ['📞 Lista de Ligação Energizados — ' + tipoTitulo],
+    ['ℹ️ Base iVolt com status_financeiro vazio ou "Saldo", sem URLs solatio/tinyurl e sem CPFs de tabulações removidas pelo CSV do 3C+. Colunas no padrão POP.'],
+    [],headersExport];
+  dados.forEach(r => {
+    aoa.push(colsExport.map(c => {
+      if (c === 'Identificador' || c === 'CPF') return fmtCpf(r.Cpf);
+      if (c === 'Referencia') return fmtData(r.Referencia);
+      if (c === 'cdatavencoriginal') return fmtData(r.cdatavencoriginal);
+      if (c === 'Valor Total Debito' || c === 'R$ Distrib') { const n = parseFloat(r[c] || 0); return isNaN(n) ? '' : fmtMoeda(n); }
+      if (c === 'Informações adicionais') return '';
+      return r[c] ?? '';
+    }));
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [16,12,17,10,30,14,12,12,15,14,6,18,12,15,26,15,20].map(w=>({wch:w}));
+  if (typeof estilizaPlanilha === 'function') estilizaPlanilha(ws, aoa, {titleRow:1, explicRows:[2], headerRows:[4], dataStart:5});
+  const wb = XLSX.utils.book_new();
+  const tipoLabel = { ajust:'Base_Total', umbol:'1_Boleto', base:'Base_Menor', bape:'BA_e_PE', custom:'Personalizado' }[tab] || tab;
+  XLSX.utils.book_append_sheet(wb, ws, tipoLabel.replace(/_/g,' ').slice(0,31));
+  const nomeArquivo = `${tipoLabel}_${dtHoje()}.xlsx`;
+  XLSX.writeFile(wb, nomeArquivo);
+  logMsg(`⬇ Exportado: ${nomeArquivo}`, 'ok');
+}
+
+window.aplicarFiltroCustom = aplicarFiltroCustom;
+window.exportarXlsx = exportarXlsx;
+window.exportarCsv = exportarCsv;
+window.irPag = irPag;
+window.limparTudo = limparTudo;
+window.onDrop = onDrop;
+window.onDrop3c = onDrop3c;
+window.onFileSelect = onFileSelect;
+window.onFileSelect3c = onFileSelect3c;
+window.processarTudo = processarTudo;
+window.renderTabela = renderTabela;
+window.resetarFiltroCustom = resetarFiltroCustom;
+window.switchTab = switchTab;
+})();
+</script>
+</body>
+</html>
