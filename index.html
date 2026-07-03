@@ -247,14 +247,13 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     </div>
     <button class="nav-btn ativo" data-pg="home">🏠 Início</button>
     <div class="nav-sec">Qualidade</div>
-    <button class="nav-btn" data-pg="analise">📊 Análise Times & Meet Call</button>
+    <button class="nav-btn" data-pg="analise">📊 Análise de Times</button>
     <button class="nav-btn" data-pg="desempenho">📈 Desempenho por Agente</button>
     <div class="nav-sec">Resultados</div>
     <button class="nav-btn" data-pg="conversao">🎯 Conversão Pós-Contato</button>
     <button class="nav-btn" data-pg="demandas">📝 Demandas</button>
     <div class="nav-sec">Disparos</div>
     <button class="nav-btn" data-pg="d3c">📤 Disparo 3C+</button>
-    <button class="nav-btn" data-pg="dluciano">📤 Disparo Luciano</button>
     <button class="nav-btn" data-pg="gerador">📞 Ligação Energizados</button>
     <div class="credito">Desenvolvido por<br>jennifer.silveira@igreenenergy.com.br<br>iGreen Energy · 2026</div>
   </aside>
@@ -268,19 +267,18 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <h1>Central iGreen <span class="tag">TUDO EM UM SÓ LUGAR</span></h1>
     <p class="sub">Plataforma única com os processos diários de qualidade e disparo. Todos os dados são processados localmente no seu navegador — nenhum arquivo sai do seu computador.</p>
     <div class="home-grid">
-      <div class="home-card" data-pg="analise"><div class="ico">📊</div><b>Análise Times & Meet Call</b><p>Envie os CSVs do dia (ligações, produtividade e pausas) e gere os 2 Excel: Analise_Times e Analise_MeetCall, com abas por time, análise manual e status 🟢🟡🔴.</p></div>
+      <div class="home-card" data-pg="analise"><div class="ico">📊</div><b>Análise de Times</b><p>Envie os CSVs do dia (ligações, produtividade e pausas) e gere os 2 Excel: Analise_Times e Analise_MeetCall, com abas por time, análise manual e status 🟢🟡🔴.</p></div>
       <div class="home-card" data-pg="desempenho"><div class="ico">📈</div><b>Desempenho por Agente</b><p>Ligações ≥15s, tempo manual vs. ligações manuais e coluna Diferença, direto na tela e exportável.</p></div>
       <div class="home-card" data-pg="conversao"><div class="ico">🎯</div><b>Conversão Pós-Contato</b><p>Cruza o CSV das ligações do dia com o CSV de pagos: mostra quem pagou no dia do contato ou depois, taxa de conversão, valor recuperado e resultado por qualificação.</p></div>
       <div class="home-card" data-pg="demandas"><div class="ico">📝</div><b>Demandas</b><p>Anote as demandas do dia com observações, acompanhe o status e exporte tudo em Excel formatado.</p></div>
       <div class="home-card" data-pg="d3c"><div class="ico">📤</div><b>Disparo 3C+</b><p>Filtra "Promessa de Pagamento" e "Solicitou 2ª via" do CSV de ligações e gera Excel com Celular | CPF.</p></div>
-      <div class="home-card" data-pg="dluciano"><div class="ico">📤</div><b>Disparo Luciano</b><p>Base de vencidos → clientes puros com 1 boleto, 3 a 30 dias vencidos, limite de 5.000 clientes.</p></div>
       <div class="home-card" data-pg="gerador"><div class="ico">📞</div><b>Ligação Energizados</b><p>Base iVolt → listas de ligação (Base Total, 1 Boleto, Base Menor, BA/PE), remoção de tabulações via 3C+ e exportação no padrão POP.</p></div>
     </div>
   </section>
 
   <!-- ============ ANÁLISE TIMES & MEET CALL ============ -->
   <section class="pagina" id="pg-analise">
-    <h1>📊 Análise Times & Meet Call</h1>
+    <h1>📊 Análise de Times</h1>
     <p class="sub">Envie o CSV de ligações do 3C+ e o(s) CSV(s) de produtividade do dia. CSVs de pausas individuais são opcionais — quando enviados, o intervalo líquido desconta as pausas produtivas. Serão gerados 2 arquivos: <b>Analise_Times_DD-MM.xlsx</b> e <b>Analise_MeetCall_DD-MM.xlsx</b>.</p>
     <div class="grid2">
       <div class="card"><h3>📞 CSV de Ligações (3C+)</h3><div class="dica">Colunas: agent_name, campaign_name, qualification_name, identifier, call_mode, speaking_with_agent_time, call_date</div>
@@ -384,24 +382,6 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     </div>
     <div class="status-msg" id="d3c-msg"></div>
     <div id="d3c-tabela"></div>
-  </section>
-
-  <!-- ============ DISPARO LUCIANO ============ -->
-  <section class="pagina" id="pg-dluciano">
-    <h1>📤 Disparo Luciano</h1>
-    <p class="sub">Envie a base de vencidos (CSV ou Excel). Regras aplicadas: <b>clientes puros com exatamente 1 boleto</b>, vencido entre <b>3 e 30 dias</b>, limitado a <b>5.000 clientes</b>. ⚠️ Nunca disparar para clientes com menos de 3 dias vencidos — sem exceções.</p>
-    <div class="grid2">
-      <div class="card"><h3>📄 Base de Vencidos</h3><div class="dica">CSV ou XLSX com cliente, celular, cpf, valorapagar e data de vencimento (cdatavencoriginal ou dtvencimento).</div>
-        <label class="drop" id="drop-lu">Clique ou arraste o arquivo aqui<input type="file" accept=".csv,.xlsx,.xls" id="file-lu"></label></div>
-    </div>
-    <div class="linha-config">
-      <div class="campo"><label>Dias vencidos (mín)</label><input type="number" id="lu-min" value="3" min="3"></div>
-      <div class="campo"><label>Dias vencidos (máx)</label><input type="number" id="lu-max" value="30"></div>
-      <div class="campo"><label>Limite de clientes</label><input type="number" id="lu-limite" value="5000"></div>
-      <button class="btn" id="btn-lu-gerar" disabled>⚙️ Filtrar e gerar Excel</button>
-    </div>
-    <div class="status-msg" id="lu-msg"></div>
-    <div id="lu-tabela"></div>
   </section>
 
   <!-- ============ LIGAÇÃO ENERGIZADOS (iVOLT) ============ -->
@@ -1393,65 +1373,6 @@ document.getElementById('btn-3c-gerar').addEventListener('click',()=>{
   }catch(e){ msg('d3c-msg','erro','❌ '+e.message); }
 });
 
-/* ================================================================
-   4) DISPARO LUCIANO
-   ================================================================ */
-let luDados=null;
-setupDrop('drop-lu','file-lu', async files=>{
-  const f=files[0];
-  if(/\.xlsx?$/i.test(f.name)){
-    const buf=await f.arrayBuffer();
-    const wb=XLSX.read(buf,{type:'array'});
-    luDados=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
-  } else luDados=await lerCSV(f);
-  const d=document.getElementById('drop-lu'); d.classList.add('ok'); d.firstChild.textContent='✅ '+f.name+' ('+luDados.length+' linhas)';
-  document.getElementById('btn-lu-gerar').disabled=false;
-});
-document.getElementById('btn-lu-gerar').addEventListener('click',()=>{
-  try{
-    limpaMsg('lu-msg');
-    let min=Math.max(3,parseInt(document.getElementById('lu-min').value)||3);
-    document.getElementById('lu-min').value=min; // trava: nunca menos de 3 dias
-    const max=parseInt(document.getElementById('lu-max').value)||30;
-    const limite=parseInt(document.getElementById('lu-limite').value)||5000;
-    const h=Object.keys(luDados[0]||{});
-    const cCpf=achaCol(h,['cpf']), cCel=achaCol(h,['celular','telefone','phone']),
-          cVenc=achaCol(h,['cdatavencoriginal','dtvencimento','vencimento','venc. original','dt. vencimento']),
-          cVal=achaCol(h,['valorapagar','valor a pagar','valor']),
-          cCli=achaCol(h,['cliente','nome']);
-    if(!cCpf||!cVenc) throw new Error('Base sem colunas de CPF e/ou data de vencimento (cdatavencoriginal/dtvencimento).');
-    const hoje=new Date(); hoje.setHours(0,0,0,0);
-    // agrupa por CPF
-    const porCpf={};
-    for(const r of luDados){
-      const cpf=soDigitos(r[cCpf]); if(!cpf) continue;
-      (porCpf[cpf]=porCpf[cpf]||[]).push(r);
-    }
-    const saida=[];
-    for(const [cpf,boletos] of Object.entries(porCpf)){
-      if(boletos.length!==1) continue; // cliente puro: exatamente 1 boleto
-      const r=boletos[0];
-      const dv=parseData(r[cVenc]); if(!dv) continue;
-      const dias=Math.floor((hoje-dv)/86400000);
-      if(dias<min||dias>max) continue;
-      const cel=limpaCelular(cCel?r[cCel]:''); if(!cel) continue;
-      saida.push([cel, fmtCPF(cpf), cCli?String(r[cCli]||'').trim():'', dias, cVal?String(r[cVal]||'').replace('.',','):'' ]);
-      if(saida.length>=limite) break;
-    }
-    if(!saida.length) throw new Error('Nenhum cliente atende às regras (1 boleto, '+min+'–'+max+' dias vencidos).');
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, abaBonita([[CREDITO],['📤 Disparo Luciano'],
-      ['ℹ️ Clientes puros com exatamente 1 boleto, vencido entre '+min+' e '+max+' dias, limitado a '+limite+' clientes. ⚠️ Regra obrigatória: nunca disparar para menos de 3 dias vencidos — sem exceções.'],
-      [],['Celular','CPF','Cliente','Dias Vencidos','Valor a Pagar'],...saida],[16,18,32,14,14],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Disparo Luciano');
-    const nome='Disparo_Luciano_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx';
-    baixaXLSX(wb,nome);
-    let html='<div class="tabela-wrap"><table><tr><th>Celular</th><th>CPF</th><th>Cliente</th><th>Dias Vencidos</th><th>Valor</th></tr>';
-    saida.slice(0,80).forEach(l=>html+=`<tr><td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td><td class="num">${l[3]}</td><td class="num">${l[4]}</td></tr>`);
-    html+='</table></div>'+(saida.length>80?`<p class="sub" style="margin-top:8px">Mostrando 80 de ${saida.length} — o Excel contém todos.</p>`:'');
-    document.getElementById('lu-tabela').innerHTML=html;
-    msg('lu-msg','ok','✅ <b>'+nome+'</b> gerado com '+saida.length+' clientes (1 boleto · '+min+'–'+max+' dias vencidos · limite '+limite+').');
-  }catch(e){ msg('lu-msg','erro','❌ '+e.message); }
-});
 </script>
 <script>
 (function(){
