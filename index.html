@@ -251,7 +251,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <button class="nav-btn" data-pg="desempenho">📈 Desempenho por Agente</button>
     <div class="nav-sec">Resultados</div>
     <button class="nav-btn" data-pg="conversao">🎯 Conversão Pós-Contato</button>
-    <button class="nav-btn" data-pg="calculadora">🧮 Calculadora do Atendente</button>
+    <button class="nav-btn" data-pg="demandas">📝 Demandas</button>
     <div class="nav-sec">Disparos</div>
     <button class="nav-btn" data-pg="d3c">📤 Disparo 3C+</button>
     <button class="nav-btn" data-pg="dluciano">📤 Disparo Luciano</button>
@@ -270,8 +270,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="home-grid">
       <div class="home-card" data-pg="analise"><div class="ico">📊</div><b>Análise Times & Meet Call</b><p>Envie os CSVs do dia (ligações, produtividade e pausas) e gere os 2 Excel: Analise_Times e Analise_MeetCall, com abas por time, análise manual e status 🟢🟡🔴.</p></div>
       <div class="home-card" data-pg="desempenho"><div class="ico">📈</div><b>Desempenho por Agente</b><p>Ligações ≥15s, tempo manual vs. ligações manuais e coluna Diferença, direto na tela e exportável.</p></div>
-      <div class="home-card" data-pg="conversao"><div class="ico">🎯</div><b>Conversão Pós-Contato</b><p>Cruza o CSV das ligações do dia com o CSV de pagos: mostra quem pagou após o seu contato, taxa de conversão, valor recuperado e resultado por qualificação.</p></div>
-      <div class="home-card" data-pg="calculadora"><div class="ico">🧮</div><b>Calculadora do Atendente</b><p>Calcula a pontuação do mês: recebidos, promessas, monitoria e o bônus ×1,2 — com modo Atendente e Atendente Pleno (média da equipe).</p></div>
+      <div class="home-card" data-pg="conversao"><div class="ico">🎯</div><b>Conversão Pós-Contato</b><p>Cruza o CSV das ligações do dia com o CSV de pagos: mostra quem pagou no dia do contato ou depois, taxa de conversão, valor recuperado e resultado por qualificação.</p></div>
+      <div class="home-card" data-pg="demandas"><div class="ico">📝</div><b>Demandas</b><p>Anote as demandas do dia com observações, acompanhe o status e exporte tudo em Excel formatado.</p></div>
       <div class="home-card" data-pg="d3c"><div class="ico">📤</div><b>Disparo 3C+</b><p>Filtra "Promessa de Pagamento" e "Solicitou 2ª via" do CSV de ligações e gera Excel com Celular | CPF.</p></div>
       <div class="home-card" data-pg="dluciano"><div class="ico">📤</div><b>Disparo Luciano</b><p>Base de vencidos → clientes puros com 1 boleto, 3 a 30 dias vencidos, limite de 5.000 clientes.</p></div>
       <div class="home-card" data-pg="gerador"><div class="ico">📞</div><b>Ligação Energizados</b><p>Base iVolt → listas de ligação (Base Total, 1 Boleto, Base Menor, BA/PE), remoção de tabulações via 3C+ e exportação no padrão POP.</p></div>
@@ -303,15 +303,21 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <!-- ============ DESEMPENHO ============ -->
   <section class="pagina" id="pg-desempenho">
     <h1>📈 Desempenho por Agente</h1>
-    <p class="sub">Envie o CSV de ligações (e, se quiser a coluna Diferença, o CSV de produtividade). A tabela mostra ligações ≥15s, tempo em ligações manuais e a diferença entre o manual da produtividade e o manual real com ligação.</p>
+    <p class="sub">Envie o CSV de ligações do 3C+ e, para quem atende pelo chat, preencha os dados manualmente (nome, ligações ≥15s e total). O cálculo junta tudo em uma tabela única com o % ≥15s.</p>
     <div class="grid2">
-      <div class="card"><h3>📞 CSV de Ligações (3C+)</h3><div class="dica">Mesmo relatório da análise diária.</div>
+      <div class="card"><h3>📞 CSV de Ligações (3C+)</h3><div class="dica">Relatório de ligações do dia — agent_name e speaking_with_agent_time.</div>
         <label class="drop" id="drop-de-lig">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-de-lig"></label></div>
-      <div class="card"><h3>⏱️ CSV de Produtividade <span class="opcional">opcional</span></h3><div class="dica">Necessário para calcular a coluna Diferença (manual sem ligação).</div>
-        <label class="drop" id="drop-de-prod">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-de-prod"></label></div>
+      <div class="card"><h3>✍️ Dados manuais (Chat)</h3><div class="dica">Para quem atende pelo chat e não aparece no CSV: informe o nome, quantos atendimentos ≥15s e o total geral.</div>
+        <div class="linha-config" style="margin:6px 0 0">
+          <div class="campo" style="flex:1;min-width:150px"><label>Nome</label><input type="text" id="de-m-nome" placeholder="Nome do agente" style="width:100%"></div>
+          <div class="campo"><label>≥15s</label><input type="number" id="de-m-15" min="0" style="min-width:90px;width:90px"></div>
+          <div class="campo"><label>Total geral</label><input type="number" id="de-m-total" min="0" style="min-width:90px;width:90px"></div>
+          <button class="btn sec" id="btn-de-m-add">➕ Adicionar</button>
+        </div>
+        <div class="arquivos-lista" id="lista-de-manual"></div></div>
     </div>
     <div class="linha-config">
-      <button class="btn" id="btn-de-gerar" disabled>⚙️ Gerar desempenho</button>
+      <button class="btn" id="btn-de-gerar" disabled>⚙️ Calcular desempenho</button>
       <button class="btn sec" id="btn-de-excel" style="display:none">⬇️ Baixar Excel</button>
     </div>
     <div class="status-msg" id="de-msg"></div>
@@ -322,7 +328,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <!-- ============ CONVERSÃO PÓS-CONTATO ============ -->
   <section class="pagina" id="pg-conversao">
     <h1>🎯 Conversão Pós-Contato</h1>
-    <p class="sub">Envie o CSV das ligações do dia (clientes que você falou, com a qualificação) e o CSV de pagos. O cruzamento é feito por <b>CPF</b> e mostra quem pagou <b>após</b> o seu contato, quem já tinha pago antes e quem ainda não pagou — com taxa de conversão, valor recuperado e resultado por qualificação.</p>
+    <p class="sub">Envie o CSV das ligações do dia (clientes que você falou, com a qualificação) e o CSV de pagos. O cruzamento é feito por <b>CPF</b> e mostra quem pagou <b>no dia do contato ou depois</b> (conversão), quem já tinha pago antes e quem ainda não pagou — com taxa de conversão, valor recuperado e resultado por qualificação.</p>
     <div class="grid2">
       <div class="card"><h3>📞 CSV de Ligações do Dia (3C+)</h3><div class="dica">Colunas: agent_name, qualification_name, identifier (CPF), call_date, speaking_with_agent_time.</div>
         <label class="drop" id="drop-cv-lig">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-cv-lig"></label></div>
@@ -341,76 +347,28 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <div id="cv-tabela"></div>
   </section>
 
-  <!-- ============ CALCULADORA DO ATENDENTE ============ -->
-  <section class="pagina" id="pg-calculadora">
-    <h1>🧮 Calculadora do Atendente</h1>
-    <p class="sub">Calcula a pontuação do mês. Bateu a meta = pontuação cheia; passou da meta = proporcional acima. No final, o total é multiplicado por <b>1,2</b>. Todos os parâmetros são editáveis em ⚙️ Parâmetros.</p>
-
+  <!-- ============ DEMANDAS ============ -->
+  <section class="pagina" id="pg-demandas">
+    <h1>📝 Demandas</h1>
+    <p class="sub">Anote as demandas do dia e acompanhe o andamento. A lista fica salva no seu navegador (neste computador) e pode ser exportada em Excel a qualquer momento.</p>
     <div class="card" style="margin-bottom:16px">
-      <h3>⚙️ Parâmetros <span class="opcional">edite se as regras mudarem</span></h3>
+      <h3>➕ Nova demanda</h3>
       <div class="linha-config" style="margin:12px 0 0">
-        <div class="campo"><label>Pts recebidos (atendente)</label><input type="number" id="pr-at-rec" value="3500"></div>
-        <div class="campo"><label>Pts promessa (atendente)</label><input type="number" id="pr-at-pro" value="500"></div>
-        <div class="campo"><label>Pts monitoria (atendente)</label><input type="number" id="pr-at-mon" value="1000"></div>
-        <div class="campo"><label>Bônus 100% em todas</label><input type="number" id="pr-at-mon100" value="1100"></div>
-      </div>
-      <div class="linha-config" style="margin:8px 0 0">
-        <div class="campo"><label>Pts média equipe (pleno)</label><input type="number" id="pr-pl-med" value="3400"></div>
-        <div class="campo"><label>Referência da média (pts)</label><input type="number" id="pr-pl-ref" value="5000"></div>
-        <div class="campo"><label>Pts monitoria (pleno)</label><input type="number" id="pr-pl-mon" value="500"></div>
-        <div class="campo"><label>Monitoria 100% em todas (pleno)</label><input type="number" id="pr-pl-mon100" value="600"></div>
-        <div class="campo"><label>Pts recebidos (pleno)</label><input type="number" id="pr-pl-rec" value="1000"></div>
-        <div class="campo"><label>Meta recebidos (pleno)</label><input type="number" id="pr-pl-meta" value="35000"></div>
-        <div class="campo"><label>Multiplicador final</label><input type="number" id="pr-mult" value="1.2" step="0.1"></div>
+        <div class="campo"><label>Data</label><input type="date" id="dm-data"></div>
+        <div class="campo" style="flex:1;min-width:240px"><label>Demanda *</label><input type="text" id="dm-desc" placeholder="O que precisa ser feito" style="width:100%"></div>
+        <div class="campo" style="flex:1;min-width:200px"><label>Observações</label><input type="text" id="dm-obs" style="width:100%"></div>
+        <button class="btn" id="btn-dm-add">➕ Adicionar</button>
       </div>
     </div>
-
-    <div class="grid2">
-      <!-- Atendente -->
-      <div class="card">
-        <h3>👤 Atendente</h3>
-        <div class="linha-config" style="margin:12px 0 0;flex-direction:column;align-items:stretch;gap:10px">
-          <div class="campo"><label>Nome</label><input type="text" id="at-nome" placeholder="Nome do atendente" style="width:100%"></div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <div class="campo" style="flex:1"><label>Meta de recebidos</label><input type="number" id="at-meta" value="70000" style="width:100%;min-width:0"></div>
-            <div class="campo" style="flex:1"><label>Recebidos realizados</label><input type="number" id="at-real" style="width:100%;min-width:0"></div>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <div class="campo" style="flex:1"><label>Meta de promessas pagas</label><input type="number" id="at-prometa" value="0" style="width:100%;min-width:0"></div>
-            <div class="campo" style="flex:1"><label>Promessas pagas</label><input type="number" id="at-proreal" style="width:100%;min-width:0"></div>
-          </div>
-          <div class="campo"><label>Notas das monitorias (%) — separe por vírgula. Ex: 100, 95, 100</label><input type="text" id="at-mon" placeholder="100, 100, 100" style="width:100%"></div>
-          <button class="btn" id="btn-at-calc">🧮 Calcular atendente</button>
-        </div>
-        <div id="at-resultado" style="margin-top:14px"></div>
-      </div>
-      <!-- Pleno -->
-      <div class="card">
-        <h3>⭐ Atendente Pleno</h3>
-        <div class="dica" style="margin-top:4px">Atende meio período + demandas de líder. Recebe pela média da equipe + monitoria + meta própria de recebidos.</div>
-        <div class="linha-config" style="margin:8px 0 0;flex-direction:column;align-items:stretch;gap:10px">
-          <div class="campo"><label>Nome</label><input type="text" id="pl-nome" placeholder="Nome do atendente pleno" style="width:100%"></div>
-          <div class="campo"><label>Média de pontos da equipe (base, antes do ×1,2) — preenchida automaticamente pela lista abaixo</label><input type="number" id="pl-media" style="width:100%"></div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <div class="campo" style="flex:1"><label>Recebidos realizados</label><input type="number" id="pl-real" style="width:100%;min-width:0"></div>
-            <div class="campo" style="flex:1"><label>Notas das monitorias (%)</label><input type="text" id="pl-mon" placeholder="100, 100" style="width:100%;min-width:0"></div>
-          </div>
-          <label style="font-size:12.5px;color:var(--texto2);display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pl-extra" checked style="accent-color:var(--verde)"> Incluir +500 pts extras prometidos em reunião (junho)</label>
-          <button class="btn" id="btn-pl-calc">🧮 Calcular pleno</button>
-        </div>
-        <div id="pl-resultado" style="margin-top:14px"></div>
-      </div>
+    <div class="linha-config">
+      <div class="campo"><label>Filtrar por status</label><select id="dm-filtro"><option value="">Todos</option><option>Pendente</option><option>Em andamento</option><option>Concluída</option></select></div>
+      <div class="campo" style="flex:1;min-width:200px"><label>Buscar</label><input type="text" id="dm-busca" placeholder="Demanda, solicitante..." style="width:100%"></div>
+      <button class="btn sec" id="btn-dm-excel">⬇️ Baixar Excel</button>
+      <button class="btn sec" id="btn-dm-limpar">🗑️ Excluir concluídas</button>
     </div>
-
-    <div class="card" style="margin-top:2px">
-      <h3>👥 Equipe do mês</h3>
-      <div class="dica">Cada cálculo pode ser adicionado aqui. A média de pontos base da equipe alimenta automaticamente o cálculo do pleno.</div>
-      <div class="linha-config" style="margin:10px 0 0">
-        <button class="btn sec" id="btn-eq-excel" disabled>⬇️ Baixar Excel da equipe</button>
-        <button class="btn sec" id="btn-eq-limpar" disabled>🗑️ Limpar lista</button>
-      </div>
-      <div id="eq-tabela"></div>
-    </div>
+    <div class="status-msg" id="dm-msg"></div>
+    <div id="dm-kpis"></div>
+    <div id="dm-tabela"></div>
   </section>
 
   <!-- ============ DISPARO 3C+ ============ -->
@@ -1054,72 +1012,75 @@ function processaAnalise(){
 }
 
 /* ================================================================
-   2) DESEMPENHO POR AGENTE
+   2) DESEMPENHO POR AGENTE (CSV de ligações + dados manuais do chat)
    ================================================================ */
-let deLig=null, deProd=null, deDados=null;
+let deLig=null, deManuais=[], deDados=null;
+function deAtualizaBotao(){ document.getElementById('btn-de-gerar').disabled = !(deLig || deManuais.length); }
+function deRenderManuais(){
+  const el = document.getElementById('lista-de-manual');
+  el.innerHTML = deManuais.map((m,i)=>`<div><span>💬 ${m.nome} — ${m.m15} ≥15s de ${m.total}</span><span class="x" data-i="${i}">✕</span></div>`).join('');
+  el.querySelectorAll('.x').forEach(x=>x.addEventListener('click',e=>{ deManuais.splice(+e.target.dataset.i,1); deRenderManuais(); deAtualizaBotao(); }));
+}
+document.getElementById('btn-de-m-add').addEventListener('click',()=>{
+  const nome = document.getElementById('de-m-nome').value.trim();
+  const m15  = parseInt(document.getElementById('de-m-15').value)||0;
+  const total= parseInt(document.getElementById('de-m-total').value)||0;
+  if(!nome){ msg('de-msg','erro','❌ Informe o nome do agente.'); return; }
+  if(total<m15){ msg('de-msg','erro','❌ O total geral não pode ser menor que os ≥15s.'); return; }
+  limpaMsg('de-msg');
+  deManuais.push({nome, m15, total});
+  ['de-m-nome','de-m-15','de-m-total'].forEach(id=>document.getElementById(id).value='');
+  deRenderManuais(); deAtualizaBotao();
+  document.getElementById('de-m-nome').focus();
+});
 setupDrop('drop-de-lig','file-de-lig', async files=>{
   deLig = await lerCSV(files[0]);
   const d=document.getElementById('drop-de-lig'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+deLig.length+' ligações)';
-  document.getElementById('btn-de-gerar').disabled = false;
-});
-setupDrop('drop-de-prod','file-de-prod', async files=>{
-  deProd = await lerCSV(files[0]);
-  const d=document.getElementById('drop-de-prod'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name;
+  deAtualizaBotao();
 });
 document.getElementById('btn-de-gerar').addEventListener('click',()=>{
   try{
     limpaMsg('de-msg');
-    const h = Object.keys(deLig[0]||{});
-    const cAg=achaCol(h,['agent_name','agente']), cFala=achaCol(h,['speaking_with_agent_time','speaking']),
-          cModo=achaCol(h,['call_mode','modo']), cNum=achaCol(h,['number','record_name','telefone']);
-    if(!cAg) throw new Error('CSV sem coluna agent_name.');
     const ag={};
-    for(const r of deLig){
-      const n=String(r[cAg]||'').trim(); if(!n) continue;
-      const a = ag[n]=ag[n]||{nome:n,total:0,m15:0,manualLig:0,manualProd:null};
-      a.total++;
-      const f=parseDur(cFala?r[cFala]:0);
-      if(f>=15) a.m15++;
-      const modo=norm(cModo?r[cModo]:''), temNum=cNum? soDigitos(r[cNum]).length>=8 : true;
-      if(modo.includes('manual')&&temNum) a.manualLig+=f;
-    }
-    if(deProd){
-      const hp=Object.keys(deProd[0]||{});
-      const pAg=achaCol(hp,['agent_name','agente','nome']), pMan=achaCol(hp,['manual']);
-      if(pAg&&pMan) for(const r of deProd){
-        const n=String(r[pAg]||'').trim();
-        if(ag[n]) ag[n].manualProd=(ag[n].manualProd||0)+parseDur(r[pMan]);
+    if(deLig){
+      const h = Object.keys(deLig[0]||{});
+      const cAg=achaCol(h,['agent_name','agente']), cFala=achaCol(h,['speaking_with_agent_time','speaking']);
+      if(!cAg) throw new Error('CSV sem coluna agent_name.');
+      for(const r of deLig){
+        const n=String(r[cAg]||'').trim(); if(!n) continue;
+        const a = ag[n]=ag[n]||{nome:n,total:0,m15:0,origem:'📞 Ligações'};
+        a.total++;
+        if(parseDur(cFala?r[cFala]:0)>=15) a.m15++;
       }
     }
+    for(const m of deManuais){
+      if(ag[m.nome]){ ag[m.nome].total+=m.total; ag[m.nome].m15+=m.m15; ag[m.nome].origem='📞+💬'; }
+      else ag[m.nome]={nome:m.nome,total:m.total,m15:m.m15,origem:'💬 Chat (manual)'};
+    }
     deDados = Object.values(ag).sort((a,b)=>b.m15-a.m15);
+    if(!deDados.length) throw new Error('Nenhum agente encontrado.');
     const tot=deDados.reduce((s,a)=>s+a.total,0), tot15=deDados.reduce((s,a)=>s+a.m15,0);
     const kpi=(v,l)=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
-    document.getElementById('de-kpis').innerHTML=`<div class="kpis">${kpi(deDados.length,'agentes')}${kpi(tot.toLocaleString('pt-BR'),'ligações')}${kpi(tot15.toLocaleString('pt-BR'),'≥15s')}${kpi((tot?tot15/tot*100:0).toFixed(1).replace('.',',')+'%','% ≥15s geral')}</div>`;
-    let html='<div class="tabela-wrap"><table><tr><th>#</th><th>Agente</th><th>Total</th><th>≥15s</th><th>% ≥15s</th><th>Manual (Prod.)</th><th>Lig. Manuais</th><th>Diferença</th><th>Status</th></tr>';
+    document.getElementById('de-kpis').innerHTML=`<div class="kpis">${kpi(deDados.length,'agentes')}${kpi(tot.toLocaleString('pt-BR'),'atendimentos')}${kpi(tot15.toLocaleString('pt-BR'),'≥15s')}${kpi((tot?tot15/tot*100:0).toFixed(1).replace('.',',')+'%','% ≥15s geral')}${kpi(deManuais.length,'💬 chat manual')}</div>`;
+    let html='<div class="tabela-wrap"><table><tr><th>#</th><th>Agente</th><th>Origem</th><th>Total</th><th>≥15s</th><th>% ≥15s</th></tr>';
     deDados.forEach((a,i)=>{
-      const dif = a.manualProd!=null ? a.manualProd-a.manualLig : null;
-      const st  = dif==null?'<span class="chip cinza">—</span>':
-        dif>300?'<span class="chip vermelho">🔴 Analisar</span>':dif>60?'<span class="chip amarelo">🟡 Atenção</span>':dif>0?'<span class="chip amarelo">⚠️ Verificar</span>':'<span class="chip verde">✅ OK</span>';
-      html+=`<tr><td>${i+1}</td><td>${a.nome}</td><td class="num">${a.total}</td><td class="num">${a.m15}</td><td class="num">${(a.total?a.m15/a.total*100:0).toFixed(1).replace('.',',')}%</td><td class="num">${a.manualProd!=null?fmtDur(a.manualProd):'—'}</td><td class="num">${fmtDur(a.manualLig)}</td><td class="num">${dif!=null?fmtDurNeg(dif):'—'}</td><td>${st}</td></tr>`;
+      html+=`<tr><td>${i+1}</td><td>${a.nome}</td><td>${a.origem}</td><td class="num">${a.total.toLocaleString('pt-BR')}</td><td class="num">${a.m15.toLocaleString('pt-BR')}</td><td class="num">${(a.total?a.m15/a.total*100:0).toFixed(1).replace('.',',')}%</td></tr>`;
     });
     document.getElementById('de-tabela').innerHTML=html+'</table></div>';
     document.getElementById('btn-de-excel').style.display='inline-block';
-    msg('de-msg','ok','✅ Desempenho gerado para '+deDados.length+' agentes.'+(deProd?'':' Envie o CSV de produtividade para calcular a coluna Diferença.'));
+    msg('de-msg','ok','✅ Desempenho calculado para '+deDados.length+' agentes ('+(deLig?deLig.length+' ligações do CSV':'sem CSV')+(deManuais.length?' + '+deManuais.length+' do chat manual':'')+').');
   }catch(e){ msg('de-msg','erro','❌ '+e.message); }
 });
 document.getElementById('btn-de-excel').addEventListener('click',()=>{
+  if(!xlsxPronto()) return;
   const dados=[[CREDITO],['📈 Desempenho por Agente'],
-    ['ℹ️ Ligações ≥15s indicam conversas reais. Diferença = manual (produtividade) − tempo em ligações manuais com número: ✅ OK (≤0) · ⚠️ Verificar (até 1min) · 🟡 Atenção (1–5min) · 🔴 Analisar (>5min).'],
-    [],['#','Agente','Total Ligações','Ligações ≥15s','% ≥15s','Manual (Produtividade)','Tempo Lig. Manuais','Diferença','Status']];
-  deDados.forEach((a,i)=>{
-    const dif=a.manualProd!=null?a.manualProd-a.manualLig:null;
-    dados.push([i+1,a.nome,a.total,a.m15,(a.total?a.m15/a.total*100:0).toFixed(1).replace('.',',')+'%',
-      a.manualProd!=null?fmtDur(a.manualProd):'—',fmtDur(a.manualLig),dif!=null?fmtDurNeg(dif):'—',
-      dif==null?'—':dif>300?'🔴 Analisar':dif>60?'🟡 Atenção':dif>0?'⚠️ Verificar':'✅ OK']);
-  });
+    ['ℹ️ Atendimentos ≥15 segundos indicam conversas reais. Agentes 📞 vêm do CSV de ligações do 3C+; agentes 💬 foram preenchidos manualmente (chat). Ordenado por ≥15s.'],
+    [],['#','Agente','Origem','Total','≥15s','% ≥15s']];
+  deDados.forEach((a,i)=>dados.push([i+1,a.nome,a.origem,a.total,a.m15,(a.total?a.m15/a.total*100:0).toFixed(1).replace('.',',')+'%']));
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, abaBonita(dados,[5,28,14,14,10,22,18,14,14],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Desempenho');
-  baixaXLSX(wb,'Desempenho_iGreen.xlsx');
+  XLSX.utils.book_append_sheet(wb, abaBonita(dados,[5,28,18,12,12,10],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Desempenho');
+  const hoje=new Date();
+  baixaXLSX(wb,'Desempenho_iGreen_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx');
 });
 
 /* ================================================================
@@ -1218,7 +1179,7 @@ function processaConversao(){
       cliente = pagos.find(p=>p.cliente)?.cliente||'';
       const apos = c.dataContato ? pagos.filter(p=>p.data && p.data>=c.dataContato) : pagos;
       if(apos.length){
-        status='🟢 Pagou após contato'; nApos++;
+        status='🟢 Pagou no dia ou após'; nApos++;
         valor=apos.reduce((s,p)=>s+p.valor,0); valorApos+=valor;
         dataPgto=apos.reduce((m,p)=>!m||p.data<m?p.data:m,null);
         if(c.dataContato&&dataPgto) dias=Math.round((dataPgto-c.dataContato)/86400000);
@@ -1253,12 +1214,12 @@ function processaConversao(){
   const kpi=(v,l)=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
   document.getElementById('cv-kpis').innerHTML=`<div class="kpis">
     ${kpi(total.toLocaleString('pt-BR'),'clientes contatados')}
-    ${kpi(nApos.toLocaleString('pt-BR'),'🟢 pagaram após contato')}
+    ${kpi(nApos.toLocaleString('pt-BR'),'🟢 pagaram no dia ou após')}
     ${kpi(taxa.toFixed(1).replace('.',',')+'%','taxa de conversão')}
     ${kpi(fmtBRL(valorApos),'valor recuperado')}
     ${kpi(nNao.toLocaleString('pt-BR'),'🔴 não pagaram')}
     ${kpi(nAntes.toLocaleString('pt-BR'),'🔵 pagaram antes')}</div>`;
-  let hq='<div class="card"><h3>📌 Resultado por Qualificação</h3><div class="tabela-wrap" style="margin-top:10px"><table><tr><th>Qualificação</th><th>Contatados</th><th>Pagaram após</th><th>% Conversão</th><th>Valor Recuperado</th></tr>';
+  let hq='<div class="card"><h3>📌 Resultado por Qualificação</h3><div class="tabela-wrap" style="margin-top:10px"><table><tr><th>Qualificação</th><th>Contatados</th><th>Pagaram (dia ou após)</th><th>% Conversão</th><th>Valor Recuperado</th></tr>';
   cvPorQual.forEach(q=>{
     hq+=`<tr><td>${q.qual}</td><td class="num">${q.contatados}</td><td class="num">${q.pagaram}</td><td class="num">${(q.contatados?q.pagaram/q.contatados*100:0).toFixed(1).replace('.',',')}%</td><td class="num">${fmtBRL(q.valor)}</td></tr>`;
   });
@@ -1271,7 +1232,7 @@ function processaConversao(){
   ht+='</table></div>'+(linhas.length>150?`<p class="sub" style="margin-top:8px">Mostrando 150 de ${linhas.length} — o Excel contém todos.</p>`:'');
   document.getElementById('cv-tabela').innerHTML=ht;
   document.getElementById('btn-cv-excel').style.display='inline-block';
-  msg('cv-msg','ok',`✅ Cruzamento concluído: ${total} clientes contatados${minSeg?` (fala ≥${minSeg}s)`:''}${filtroAgente?` · agente: ${filtroAgente}`:''} · ${nApos} pagaram após o contato (${taxa.toFixed(1).replace('.',',')}%) · ${fmtBRL(valorApos)} recuperados.`+(ligSemCpf?` · ${ligSemCpf} ligações sem CPF ignoradas`:''));
+  msg('cv-msg','ok',`✅ Cruzamento concluído: ${total} clientes contatados${minSeg?` (fala ≥${minSeg}s)`:''}${filtroAgente?` · agente: ${filtroAgente}`:''} · ${nApos} pagaram no dia do contato ou após (${taxa.toFixed(1).replace('.',',')}%) · ${fmtBRL(valorApos)} recuperados.`+(ligSemCpf?` · ${ligSemCpf} ligações sem CPF ignoradas`:''));
 }
 document.getElementById('btn-cv-excel').addEventListener('click',()=>{
   const r=cvResumo;
@@ -1279,16 +1240,16 @@ document.getElementById('btn-cv-excel').addEventListener('click',()=>{
     ['Filtro de fala mínima', r.minSeg+'s'],
     ['Agente', r.filtroAgente||'Todos'],
     ['Clientes contatados', r.total],
-    ['🟢 Pagaram após o contato', r.nApos],
+    ['🟢 Pagaram no dia do contato ou após', r.nApos],
     ['Taxa de conversão', r.taxa.toFixed(1).replace('.',',')+'%'],
     ['Valor recuperado', fmtBRL(r.valorApos)],
     ['🔴 Não pagaram', r.nNao],
     ['🔵 Pagaram antes do contato', r.nAntes],
     [],['POR QUALIFICAÇÃO'],
-    ['Qualificação','Contatados','Pagaram após','% Conversão','Valor Recuperado']];
+    ['Qualificação','Contatados','Pagaram (dia ou após)','% Conversão','Valor Recuperado']];
   cvPorQual.forEach(q=>resumo.push([q.qual,q.contatados,q.pagaram,(q.contatados?q.pagaram/q.contatados*100:0).toFixed(1).replace('.',',')+'%',fmtBRL(q.valor)]));
   const clientes=[[CREDITO],['🎯 Conversão Pós-Contato — Clientes'],
-    ['ℹ️ Cruzamento por CPF entre as ligações do dia e a base de pagos. 🟢 Pagou após contato = pagamento na data do 1º contato ou depois (conta como conversão) · 🔵 Pagou antes = já tinha pago · 🔴 Não pagou.'],
+    ['ℹ️ Cruzamento por CPF entre as ligações do dia e a base de pagos. 🟢 Pagou no dia ou após = pagamento na MESMA data do 1º contato ou depois (conta como conversão) · 🔵 Pagou antes = já tinha pago antes do contato · 🔴 Não pagou.'],
     [],['Cliente','CPF','Qualificação','Agente','Contatos','Data Contato','Status','Data Pagamento','Dias até pagar','Valor Pago']];
   cvResultado.forEach(l=>clientes.push([l.cliente,l.cpf,l.qual,l.agente,l.contatos,l.dataContato,l.status,l.dataPgto,l.dias,l.valor?fmtBRL(l.valor):'']));
   const wb=XLSX.utils.book_new();
@@ -1299,109 +1260,89 @@ document.getElementById('btn-cv-excel').addEventListener('click',()=>{
 });
 
 /* ================================================================
-   6) CALCULADORA DO ATENDENTE
+   7) DEMANDAS (anotações com exportação Excel)
    ================================================================ */
-let eqLista = [];
-function num(id){ return parseFloat(document.getElementById(id).value)||0; }
-function ptsFmt(n){ return n.toLocaleString('pt-BR',{maximumFractionDigits:0}); }
-function parseMonitorias(txt){
-  return String(txt||'').split(/[,;]/).map(s=>parseFloat(s.trim().replace('%','').replace(',','.'))).filter(n=>!isNaN(n));
+let demandas = [];
+const DM_KEY = 'central_igreen_demandas';
+function dmCarrega(){ try{ const v = localStorage.getItem(DM_KEY); if(v) demandas = JSON.parse(v)||[]; }catch(e){ demandas = demandas||[]; } }
+function dmSalva(){ try{ localStorage.setItem(DM_KEY, JSON.stringify(demandas)); }catch(e){} }
+function dmDataBR(iso){ if(!iso) return '—'; const p = String(iso).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : iso; }
+function dmStatusChip(s){
+  if(s==='Concluída')    return '<span class="chip verde">🟢 Concluída</span>';
+  if(s==='Em andamento') return '<span class="chip amarelo">🟡 Em andamento</span>';
+  return '<span class="chip vermelho">🔴 Pendente</span>';
 }
-function calcMonitoria(notas, ptsBase, pts100){
-  if(!notas.length) return {pts:0, media:0, todas100:false, detalhe:'sem notas'};
-  const media = notas.reduce((s,n)=>s+n,0)/notas.length;
-  const todas100 = notas.every(n=>n>=100);
-  if(todas100) return {pts:pts100, media:100, todas100:true, detalhe:'100% em todas → bônus'};
-  return {pts: media/100*ptsBase, media, todas100:false, detalhe: media.toFixed(1).replace('.',',')+'% de média'};
-}
-function linhaBreak(rotulo, detalhe, pts, destaque){
-  return `<tr><td>${rotulo}</td><td style="color:var(--texto2)">${detalhe}</td><td class="num" style="${destaque?'color:var(--verde-claro);font-weight:700':''}">${ptsFmt(pts)} pts</td></tr>`;
-}
-function calculaAtendente(){
-  const nome=document.getElementById('at-nome').value.trim()||'Atendente';
-  const meta=num('at-meta'), real=num('at-real');
-  const proMeta=num('at-prometa'), proReal=num('at-proreal');
-  const mult=num('pr-mult')||1.2;
-  // recebidos: proporcional (bateu = cheio, passou = mais)
-  const ptsRec = meta>0 ? real/meta*num('pr-at-rec') : 0;
-  // promessa: se tiver meta, proporcional; sem meta, valor cheio se teve promessas pagas
-  const ptsPro = proMeta>0 ? proReal/proMeta*num('pr-at-pro') : (proReal>0 ? num('pr-at-pro') : 0);
-  const mon = calcMonitoria(parseMonitorias(document.getElementById('at-mon').value), num('pr-at-mon'), num('pr-at-mon100'));
-  const base = ptsRec+ptsPro+mon.pts;
-  const total = base*mult;
-  document.getElementById('at-resultado').innerHTML =
-    `<div class="tabela-wrap"><table>
-      ${linhaBreak('🎯 Recebidos', meta>0? ptsFmt(real)+' / '+ptsFmt(meta)+' ('+(real/meta*100).toFixed(1).replace('.',',')+'%)':'sem meta', ptsRec)}
-      ${linhaBreak('🤝 Promessas pagas', proMeta>0? proReal+' / '+proMeta : (proReal>0?'realizadas':'—'), ptsPro)}
-      ${linhaBreak('🎧 Monitoria', mon.detalhe, mon.pts, mon.todas100)}
-      ${linhaBreak('Subtotal (base)','', base)}
-      ${linhaBreak('✨ TOTAL ×'+String(mult).replace('.',','),'', total, true)}
-    </table></div>
-    <div class="linha-config" style="margin-top:10px"><button class="btn sec" onclick="addEquipe('${nome.replace(/'/g,'')}','Atendente',${base},${total})">➕ Adicionar à equipe</button></div>`;
-  return {nome, base, total};
-}
-function calculaPleno(){
-  const nome=document.getElementById('pl-nome').value.trim()||'Atendente Pleno';
-  const media=num('pl-media'), ref=num('pr-pl-ref')||5000;
-  const real=num('pl-real'), meta=num('pr-pl-meta')||35000;
-  const mult=num('pr-mult')||1.2;
-  const ptsMedia = ref>0 ? media/ref*num('pr-pl-med') : 0;
-  const mon = calcMonitoria(parseMonitorias(document.getElementById('pl-mon').value), num('pr-pl-mon'), num('pr-pl-mon100'));
-  const ptsRec = meta>0 ? real/meta*num('pr-pl-rec') : 0;
-  const extra = document.getElementById('pl-extra').checked ? 500 : 0;
-  const base = ptsMedia+mon.pts+ptsRec+extra;
-  const total = base*mult;
-  document.getElementById('pl-resultado').innerHTML =
-    `<div class="tabela-wrap"><table>
-      ${linhaBreak('👥 Média da equipe', ptsFmt(media)+' / '+ptsFmt(ref)+' pts de referência', ptsMedia)}
-      ${linhaBreak('🎧 Monitoria', mon.detalhe, mon.pts, mon.todas100)}
-      ${linhaBreak('🎯 Recebidos (meio período)', ptsFmt(real)+' / '+ptsFmt(meta)+' ('+(meta>0?(real/meta*100).toFixed(1).replace('.',','):'0')+'%)', ptsRec)}
-      ${extra? linhaBreak('🎁 Extra prometido em reunião','junho', extra):''}
-      ${linhaBreak('Subtotal (base)','', base)}
-      ${linhaBreak('✨ TOTAL ×'+String(mult).replace('.',','),'', total, true)}
-    </table></div>
-    <div class="linha-config" style="margin-top:10px"><button class="btn sec" onclick="addEquipe('${nome.replace(/'/g,'')}','Pleno',${base},${total})">➕ Adicionar à equipe</button></div>`;
-}
-function addEquipe(nome,tipo,base,total){
-  eqLista.push({nome,tipo,base,total});
-  renderEquipe();
-}
-function renderEquipe(){
-  const el=document.getElementById('eq-tabela');
-  document.getElementById('btn-eq-excel').disabled = !eqLista.length;
-  document.getElementById('btn-eq-limpar').disabled = !eqLista.length;
-  if(!eqLista.length){ el.innerHTML=''; document.getElementById('pl-media').value=''; return; }
-  // média base considera apenas atendentes comuns (a média da equipe que alimenta o pleno)
-  const comuns = eqLista.filter(e=>e.tipo==='Atendente');
-  const media = comuns.length ? comuns.reduce((s,e)=>s+e.base,0)/comuns.length : 0;
-  document.getElementById('pl-media').value = Math.round(media);
-  let h='<div class="tabela-wrap"><table><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Pontos Base</th><th>Total ×'+String(num('pr-mult')||1.2).replace('.',',')+'</th><th></th></tr>';
-  eqLista.forEach((e,i)=>{
-    h+=`<tr><td>${i+1}</td><td>${e.nome}</td><td>${e.tipo==='Pleno'?'⭐ Pleno':'👤 Atendente'}</td><td class="num">${ptsFmt(e.base)}</td><td class="num" style="color:var(--verde-claro);font-weight:700">${ptsFmt(e.total)}</td><td><span class="x" style="color:var(--vermelho);cursor:pointer" onclick="eqLista.splice(${i},1);renderEquipe()">✕</span></td></tr>`;
+function dmProximoStatus(s){ return s==='Pendente' ? 'Em andamento' : s==='Em andamento' ? 'Concluída' : 'Pendente'; }
+function dmRender(){
+  const filtro = document.getElementById('dm-filtro').value;
+  const busca  = norm(document.getElementById('dm-busca').value);
+  const kpi = (v,l)=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+  const pend = demandas.filter(d=>d.status==='Pendente').length;
+  const and  = demandas.filter(d=>d.status==='Em andamento').length;
+  const conc = demandas.filter(d=>d.status==='Concluída').length;
+  document.getElementById('dm-kpis').innerHTML = demandas.length ?
+    `<div class="kpis">${kpi(demandas.length,'demandas')}${kpi(pend,'🔴 pendentes')}${kpi(and,'🟡 em andamento')}${kpi(conc,'🟢 concluídas')}</div>` : '';
+  const lista = demandas
+    .map((d,i)=>({d,i}))
+    .filter(x=>!filtro || x.d.status===filtro)
+    .filter(x=>!busca || norm(x.d.desc+' '+(x.d.obs||'')).includes(busca));
+  if(!lista.length){
+    document.getElementById('dm-tabela').innerHTML = '<div class="card" style="text-align:center;color:var(--texto2);font-size:13px">Nenhuma demanda '+(demandas.length?'com esse filtro.':'anotada ainda — adicione a primeira acima! 📝')+'</div>';
+    return;
+  }
+  const ordem = {'Pendente':0,'Em andamento':1,'Concluída':2};
+  lista.sort((a,b)=> ordem[a.d.status]-ordem[b.d.status] || (a.d.data||'').localeCompare(b.d.data||''));
+  let html = '<div class="tabela-wrap"><table><tr><th>Data</th><th>Demanda</th><th>Observações</th><th>Status</th><th></th><th></th></tr>';
+  lista.forEach(({d,i})=>{
+    html += `<tr><td>${dmDataBR(d.data)}</td><td style="white-space:normal;min-width:220px">${d.desc}</td>
+      <td style="white-space:normal">${d.obs||''}</td><td>${dmStatusChip(d.status)}</td>
+      <td><button class="btn sec" style="padding:5px 10px;font-size:11px" onclick="dmStatus(${i})">↻ ${dmProximoStatus(d.status)}</button></td>
+      <td><span style="color:var(--vermelho);cursor:pointer;font-weight:bold" onclick="dmRemove(${i})">✕</span></td></tr>`;
   });
-  h+=`<tr><td></td><td><b>Média da equipe (atendentes)</b></td><td></td><td class="num"><b>${ptsFmt(media)}</b></td><td></td><td></td></tr>`;
-  el.innerHTML=h+'</table></div>';
+  document.getElementById('dm-tabela').innerHTML = html + '</table></div>';
 }
-document.getElementById('btn-at-calc').addEventListener('click',calculaAtendente);
-document.getElementById('btn-pl-calc').addEventListener('click',calculaPleno);
-document.getElementById('btn-eq-limpar').addEventListener('click',()=>{eqLista=[];renderEquipe();});
-document.getElementById('btn-eq-excel').addEventListener('click',()=>{
-  const mult=num('pr-mult')||1.2;
-  const dados=[[CREDITO],['🧮 Calculadora do Atendente — Pontuação do Mês'],
-    ['ℹ️ Bateu a meta = pontuação cheia; passou da meta = proporcional acima. Monitoria 100% em todas rende o bônus. Total final = pontos base × multiplicador.'],
-    [],['#','Nome','Tipo','Pontos Base','Total ×'+String(mult).replace('.',',')]];
-  eqLista.forEach((e,i)=>dados.push([i+1,e.nome,e.tipo,Math.round(e.base),Math.round(e.total)]));
-  const comuns=eqLista.filter(e=>e.tipo==='Atendente');
-  if(comuns.length) dados.push([],['','Média da equipe (atendentes)','',Math.round(comuns.reduce((s,e)=>s+e.base,0)/comuns.length),'']);
-  dados.push([],['▶ PARÂMETROS UTILIZADOS'],
-    ['Atendente','Recebidos '+num('pr-at-rec')+' pts · Promessa '+num('pr-at-pro')+' pts · Monitoria '+num('pr-at-mon')+' pts ('+num('pr-at-mon100')+' se 100% em todas)'],
-    ['Pleno','Média equipe '+num('pr-pl-med')+' pts (ref. '+num('pr-pl-ref')+') · Monitoria '+num('pr-pl-mon')+' pts ('+num('pr-pl-mon100')+' se 100% em todas) · Recebidos '+num('pr-pl-rec')+' pts (meta '+num('pr-pl-meta')+')'],
-    ['Multiplicador final','×'+String(mult).replace('.',',')]);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, abaBonita(dados,[5,30,14,14,14],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Pontuação');
-  const hoje=new Date();
-  baixaXLSX(wb,'Pontuacao_Atendentes_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx');
+function dmStatus(i){ demandas[i].status = dmProximoStatus(demandas[i].status); dmSalva(); dmRender(); }
+function dmRemove(i){ demandas.splice(i,1); dmSalva(); dmRender(); }
+document.getElementById('btn-dm-add').addEventListener('click',()=>{
+  const desc = document.getElementById('dm-desc').value.trim();
+  if(!desc){ msg('dm-msg','erro','❌ Escreva a demanda antes de adicionar.'); return; }
+  limpaMsg('dm-msg');
+  demandas.push({
+    data:  document.getElementById('dm-data').value || new Date().toISOString().slice(0,10),
+    desc,
+    obs:   document.getElementById('dm-obs').value.trim(),
+    status:'Pendente'
+  });
+  dmSalva(); dmRender();
+  ['dm-desc','dm-obs'].forEach(id=>document.getElementById(id).value='');
 });
+document.getElementById('dm-filtro').addEventListener('change',dmRender);
+document.getElementById('dm-busca').addEventListener('input',dmRender);
+document.getElementById('btn-dm-limpar').addEventListener('click',()=>{
+  demandas = demandas.filter(d=>d.status!=='Concluída');
+  dmSalva(); dmRender();
+});
+document.getElementById('btn-dm-excel').addEventListener('click',()=>{
+  if(!xlsxPronto()) return;
+  if(!demandas.length){ msg('dm-msg','erro','❌ Nenhuma demanda para exportar.'); return; }
+  limpaMsg('dm-msg');
+  const dados = [[CREDITO],['📝 Demandas — iGreen'],
+    ['ℹ️ Controle de demandas: 🔴 Pendente · 🟡 Em andamento · 🟢 Concluída. Ordenado por status e data.'],
+    [],['Data','Demanda','Observações','Status']];
+  const ordem = {'Pendente':0,'Em andamento':1,'Concluída':2};
+  demandas.slice().sort((a,b)=> ordem[a.status]-ordem[b.status] || (a.data||'').localeCompare(b.data||''))
+    .forEach(d=>{
+      const st = d.status==='Concluída'?'🟢 Concluída': d.status==='Em andamento'?'🟡 Em andamento':'🔴 Pendente';
+      dados.push([dmDataBR(d.data), d.desc, d.obs||'', st]);
+    });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, abaBonita(dados,[11,55,40,16],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Demandas');
+  const hoje = new Date();
+  baixaXLSX(wb,'Demandas_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx');
+  msg('dm-msg','ok','✅ Excel exportado com '+demandas.length+' demandas.');
+});
+document.getElementById('dm-data').value = new Date().toISOString().slice(0,10);
+dmCarrega(); dmRender();
 
 /* ================================================================
    3) DISPARO 3C+
