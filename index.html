@@ -249,6 +249,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="nav-sec">Qualidade</div>
     <button class="nav-btn" data-pg="analise">📊 Análise de Times</button>
     <button class="nav-btn" data-pg="desempenho">📈 Desempenho por Agente</button>
+    <button class="nav-btn" data-pg="medias">📆 Médias do Mês</button>
     <div class="nav-sec">Resultados</div>
     <button class="nav-btn" data-pg="conversao">🎯 Conversão Pós-Contato</button>
     <button class="nav-btn" data-pg="demandas">📝 Demandas</button>
@@ -269,6 +270,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="home-grid">
       <div class="home-card" data-pg="analise"><div class="ico">📊</div><b>Análise de Times</b><p>Envie os CSVs do dia (ligações, produtividade e pausas) e gere os 2 Excel: Analise_Times e Analise_MeetCall, com abas por time, análise manual e status 🟢🟡🔴.</p></div>
       <div class="home-card" data-pg="desempenho"><div class="ico">📈</div><b>Desempenho por Agente</b><p>Ligações ≥15s, tempo manual vs. ligações manuais e coluna Diferença, direto na tela e exportável.</p></div>
+      <div class="home-card" data-pg="medias"><div class="ico">📆</div><b>Médias do Mês</b><p>Suba o CSV do mês de chat e/ou ligações, informe os dias trabalhados e veja a média diária de cada pessoa — e quanto precisa entregar por dia pra bater a meta.</p></div>
       <div class="home-card" data-pg="conversao"><div class="ico">🎯</div><b>Conversão Pós-Contato</b><p>Cruza o CSV das ligações do dia com o CSV de pagos: mostra quem pagou no dia do contato ou depois, taxa de conversão, valor recuperado e resultado por qualificação.</p></div>
       <div class="home-card" data-pg="demandas"><div class="ico">📝</div><b>Demandas</b><p>Anote as demandas do dia com observações, acompanhe o status e exporte tudo em Excel formatado.</p></div>
       <div class="home-card" data-pg="d3c"><div class="ico">📤</div><b>Disparo 3C+</b><p>Filtra "Promessa de Pagamento" e "Solicitou 2ª via" do CSV de ligações e gera Excel com Celular | CPF.</p></div>
@@ -325,6 +327,29 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="status-msg" id="de-msg"></div>
     <div id="de-kpis"></div>
     <div id="de-tabela"></div>
+  </section>
+
+  <!-- ============ MÉDIAS DO MÊS ============ -->
+  <section class="pagina" id="pg-medias">
+    <h1>📆 Médias do Mês</h1>
+    <p class="sub">Análise mensal de chat e ligações: suba o CSV do mês (um, outro ou os dois), informe os <b>dias trabalhados</b> e as metas mensais. O sistema calcula a média diária que cada pessoa entregou e quanto precisa entregar por dia para bater a meta.</p>
+    <div class="grid2">
+      <div class="card"><h3>💬 CSV de Chat do mês (resoluções)</h3><div class="dica">Relatório de resoluções por colaborador (colunas Colaborador e Data Resolução).</div>
+        <label class="drop" id="drop-md-chat">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-md-chat"></label></div>
+      <div class="card"><h3>📞 CSV de Ligações do mês (3C+)</h3><div class="dica">Relatório de ligações do mês — conta as ligações ≥15s de cada agente.</div>
+        <label class="drop" id="drop-md-lig">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-md-lig"></label></div>
+    </div>
+    <div class="linha-config">
+      <div class="campo"><label>Dias trabalhados no mês</label><input type="number" id="md-dias" value="22" min="1"></div>
+      <div class="campo"><label>Meta mensal — chat (por pessoa) <span style="color:var(--texto3)">opcional</span></label><input type="number" id="md-meta-chat" placeholder="ex: 2000"></div>
+      <div class="campo"><label>Meta mensal — ligações ≥15s (por pessoa) <span style="color:var(--texto3)">opcional</span></label><input type="number" id="md-meta-lig" placeholder="ex: 2500"></div>
+      <button class="btn" id="btn-md-gerar" disabled>⚙️ Calcular médias</button>
+      <button class="btn sec" id="btn-md-excel" style="display:none">⬇️ Baixar Excel</button>
+    </div>
+    <div class="status-msg" id="md-msg"></div>
+    <div id="md-kpis"></div>
+    <div id="md-chat-tab"></div>
+    <div id="md-lig-tab"></div>
   </section>
 
   <!-- ============ CONVERSÃO PÓS-CONTATO ============ -->
@@ -1224,6 +1249,118 @@ function deExportaImagem(){
     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   },'image/png');
 }
+
+/* ================================================================
+   8) MÉDIAS DO MÊS (chat e ligações ÷ dias trabalhados)
+   ================================================================ */
+let mdChat=null, mdLig=null, mdResChat=null, mdResLig=null, mdInfo={};
+function mdAtualizaBotao(){ document.getElementById('btn-md-gerar').disabled = !(mdChat || mdLig); }
+setupDrop('drop-md-chat','file-md-chat', async files=>{
+  mdChat = await lerCSV(files[0]);
+  const d=document.getElementById('drop-md-chat'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+mdChat.length+' resoluções)';
+  mdAtualizaBotao();
+});
+setupDrop('drop-md-lig','file-md-lig', async files=>{
+  mdLig = await lerCSV(files[0]);
+  const d=document.getElementById('drop-md-lig'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+mdLig.length+' ligações)';
+  mdAtualizaBotao();
+});
+function mdStatus(pct){ return pct==null?'—' : pct>=100?'🟢 Na meta' : pct>=80?'🟡 Atenção' : '🔴 Analisar'; }
+function mdFmt(n,dec){ return n.toLocaleString('pt-BR',{minimumFractionDigits:dec??0,maximumFractionDigits:dec??0}); }
+document.getElementById('btn-md-gerar').addEventListener('click',()=>{
+  try{
+    limpaMsg('md-msg');
+    const dias = Math.max(1, parseInt(document.getElementById('md-dias').value)||22);
+    const metaChat = parseInt(document.getElementById('md-meta-chat').value)||null;
+    const metaLig  = parseInt(document.getElementById('md-meta-lig').value)||null;
+    mdInfo = {dias, metaChat, metaLig};
+    mdResChat = null; mdResLig = null;
+
+    // ---- chat: resoluções por colaborador ----
+    if(mdChat){
+      const h = Object.keys(mdChat[0]||{});
+      const cCol = achaCol(h,['colaborador','agent_name','agente','atendente']);
+      if(!cCol) throw new Error('CSV de chat sem coluna Colaborador.');
+      const cData = achaCol(h,['data resolucao','data resolução','data_resolucao','resolucao']);
+      const cont={}; const diasSet=new Set();
+      for(const r of mdChat){
+        const n=String(r[cCol]||'').trim(); if(!n) continue;
+        cont[n]=(cont[n]||0)+1;
+        if(cData && r[cData]) diasSet.add(String(r[cData]).split(',')[0].trim());
+      }
+      mdResChat = Object.entries(cont).map(([nome,total])=>{
+        const media = total/dias;
+        const metaDia = metaChat ? metaChat/dias : null;
+        const pct = metaChat ? total/metaChat*100 : null;
+        return {nome,total,media,metaDia,pct};
+      }).sort((a,b)=>b.total-a.total);
+      mdInfo.diasComResolucao = diasSet.size;
+    }
+
+    // ---- ligações: ≥15s por agente ----
+    if(mdLig){
+      const h = Object.keys(mdLig[0]||{});
+      const cAg = achaCol(h,['agent_name','agente']);
+      if(!cAg) throw new Error('CSV de ligações sem coluna agent_name.');
+      const cFala = achaCol(h,['speaking_with_agent_time','speaking']);
+      const cont={};
+      for(const r of mdLig){
+        const n=String(r[cAg]||'').trim(); if(!n) continue;
+        const a = cont[n]=cont[n]||{total:0,m15:0};
+        a.total++;
+        if(parseDur(cFala?r[cFala]:0)>=15) a.m15++;
+      }
+      mdResLig = Object.entries(cont).map(([nome,v])=>{
+        const media = v.m15/dias;
+        const metaDia = metaLig ? metaLig/dias : null;
+        const pct = metaLig ? v.m15/metaLig*100 : null;
+        return {nome,total:v.total,m15:v.m15,media,metaDia,pct};
+      }).sort((a,b)=>b.m15-a.m15);
+    }
+
+    // ---- KPIs ----
+    const kpi=(v,l)=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+    let kp = kpi(dias,'dias trabalhados');
+    if(mdResChat){ const t=mdResChat.reduce((s,a)=>s+a.total,0); kp += kpi(mdFmt(t),'💬 resoluções no mês')+kpi(mdFmt(t/dias,1),'💬 média equipe/dia'); }
+    if(mdResLig){ const t=mdResLig.reduce((s,a)=>s+a.m15,0); kp += kpi(mdFmt(t),'📞 ligações ≥15s no mês')+kpi(mdFmt(t/dias,1),'📞 média equipe/dia'); }
+    document.getElementById('md-kpis').innerHTML = '<div class="kpis">'+kp+'</div>';
+
+    // ---- tabelas ----
+    function tabela(titulo, linhasHtml){ return `<div class="card" style="margin-top:14px"><h3>${titulo}</h3><div class="tabela-wrap" style="margin-top:10px"><table>${linhasHtml}</table></div></div>`; }
+    document.getElementById('md-chat-tab').innerHTML = mdResChat ? tabela('💬 Chat — média por dia'+(mdInfo.diasComResolucao?` <span style="font-size:10px;color:var(--texto3)">(${mdInfo.diasComResolucao} dias com resolução no arquivo)</span>`:''),
+      '<tr><th>#</th><th>Colaborador</th><th>Resoluções no mês</th><th>Média/dia</th>'+(mdInfo.metaChat?'<th>Meta/dia</th><th>% da meta</th><th>Status</th>':'')+'</tr>'+
+      mdResChat.map((a,i)=>`<tr><td>${i+1}º</td><td>${a.nome}</td><td class="num">${mdFmt(a.total)}</td><td class="num"><b>${mdFmt(a.media,1)}</b></td>`+
+        (mdInfo.metaChat?`<td class="num">${mdFmt(a.metaDia,1)}</td><td class="num">${mdFmt(a.pct,1)}%</td><td><span class="chip ${a.pct>=100?'verde':a.pct>=80?'amarelo':'vermelho'}">${mdStatus(a.pct)}</span></td>`:'')+'</tr>').join('')) : '';
+    document.getElementById('md-lig-tab').innerHTML = mdResLig ? tabela('📞 Ligações — média de ≥15s por dia',
+      '<tr><th>#</th><th>Agente</th><th>≥15s no mês</th><th>Total geral</th><th>Média ≥15s/dia</th>'+(mdInfo.metaLig?'<th>Meta/dia</th><th>% da meta</th><th>Status</th>':'')+'</tr>'+
+      mdResLig.map((a,i)=>`<tr><td>${i+1}º</td><td>${a.nome}</td><td class="num">${mdFmt(a.m15)}</td><td class="num">${mdFmt(a.total)}</td><td class="num"><b>${mdFmt(a.media,1)}</b></td>`+
+        (mdInfo.metaLig?`<td class="num">${mdFmt(a.metaDia,1)}</td><td class="num">${mdFmt(a.pct,1)}%</td><td><span class="chip ${a.pct>=100?'verde':a.pct>=80?'amarelo':'vermelho'}">${mdStatus(a.pct)}</span></td>`:'')+'</tr>').join('')) : '';
+
+    document.getElementById('btn-md-excel').style.display='inline-block';
+    msg('md-msg','ok','✅ Médias calculadas com '+dias+' dias trabalhados'+(mdResChat?' · 💬 '+mdResChat.length+' colaboradores de chat':'')+(mdResLig?' · 📞 '+mdResLig.length+' agentes de ligação':'')+'.');
+  }catch(e){ msg('md-msg','erro','❌ '+e.message); }
+});
+document.getElementById('btn-md-excel').addEventListener('click',()=>{
+  if(!xlsxPronto()) return;
+  const {dias, metaChat, metaLig} = mdInfo;
+  const wb = XLSX.utils.book_new();
+  if(mdResChat){
+    const dados=[[CREDITO],['💬 Médias do Mês — Chat ('+dias+' dias trabalhados)'],
+      ['ℹ️ Média/dia = resoluções do mês ÷ dias trabalhados.'+(metaChat?' Meta mensal por pessoa: '+metaChat+' → meta diária: '+(metaChat/dias).toFixed(1).replace('.',',')+'. Status: 🟢 ≥100% · 🟡 80–99% · 🔴 <80%.':' Informe a meta mensal para ver a meta diária e o status.')],
+      [],['#','Colaborador','Resoluções no mês','Média/dia'].concat(metaChat?['Meta/dia','% da meta','Status']:[])];
+    mdResChat.forEach((a,i)=>dados.push([i+1+'º',a.nome,a.total,mdFmt(a.media,1)].concat(metaChat?[mdFmt(a.metaDia,1),mdFmt(a.pct,1)+'%',mdStatus(a.pct)]:[])));
+    XLSX.utils.book_append_sheet(wb, abaBonita(dados,[5,28,17,11,10,11,13],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Chat');
+  }
+  if(mdResLig){
+    const dados=[[CREDITO],['📞 Médias do Mês — Ligações ('+dias+' dias trabalhados)'],
+      ['ℹ️ Média/dia = ligações ≥15s do mês ÷ dias trabalhados.'+(metaLig?' Meta mensal por pessoa: '+metaLig+' → meta diária: '+(metaLig/dias).toFixed(1).replace('.',',')+'. Status: 🟢 ≥100% · 🟡 80–99% · 🔴 <80%.':' Informe a meta mensal para ver a meta diária e o status.')],
+      [],['#','Agente','≥15s no mês','Total geral','Média ≥15s/dia'].concat(metaLig?['Meta/dia','% da meta','Status']:[])];
+    mdResLig.forEach((a,i)=>dados.push([i+1+'º',a.nome,a.m15,a.total,mdFmt(a.media,1)].concat(metaLig?[mdFmt(a.metaDia,1),mdFmt(a.pct,1)+'%',mdStatus(a.pct)]:[])));
+    XLSX.utils.book_append_sheet(wb, abaBonita(dados,[5,28,13,12,14,10,11,13],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Ligações');
+  }
+  const hoje=new Date();
+  baixaXLSX(wb,'Medias_Mes_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx');
+});
 
 /* ================================================================
    5) CONVERSÃO PÓS-CONTATO (ligações × pagos)
