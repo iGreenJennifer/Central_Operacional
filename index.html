@@ -291,7 +291,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         <div class="arquivos-lista" id="lista-an-pausa"></div></div>
     </div>
     <div class="linha-config">
-      <div class="campo"><label>Data da análise (usada no nome dos arquivos)</label><input type="text" id="an-data" placeholder="DD/MM"></div>
+      <div class="campo"><label>Dia da análise (a análise é sempre de 1 dia)</label><select id="an-data"><option value="">—</option></select></div>
       <button class="btn" id="btn-an-gerar" disabled>⚙️ Processar e gerar os 2 Excel</button>
     </div>
     <div class="status-msg" id="an-msg"></div>
@@ -305,7 +305,9 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="grid2">
       <div class="card"><h3>📞 CSV de Ligações (3C+)</h3><div class="dica">Relatório de ligações do dia — agent_name e speaking_with_agent_time.</div>
         <label class="drop" id="drop-de-lig">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-de-lig"></label></div>
-      <div class="card"><h3>✍️ Dados manuais (Chat)</h3><div class="dica">Para quem atende pelo chat e não aparece no CSV: informe o nome, quantos atendimentos ≥15s e o total geral.</div>
+      <div class="card"><h3>💬 CSV do Chat <span class="opcional">opcional</span></h3><div class="dica"><b>Resolvidos</b> entram na coluna ≥15s · <b>backlogs / em aberto</b> entram só no Geral. Aceita CSV com colunas "resolvidos/backlog" por agente ou uma conversa por linha com coluna de status.</div>
+        <label class="drop" id="drop-de-chat">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-de-chat"></label></div>
+      <div class="card"><h3>✍️ Dados manuais (Chat)</h3><div class="dica">Para quem atende pelo chat e não aparece no CSV: informe o nome, quantos atendimentos ≥15s e o total geral. No chat, o total pode ser menor que os ≥15s — e se deixar em branco, uso o mesmo valor dos ≥15s.</div>
         <div class="linha-config" style="margin:6px 0 0">
           <div class="campo" style="flex:1;min-width:150px"><label>Nome</label><input type="text" id="de-m-nome" placeholder="Nome do agente" style="width:100%"></div>
           <div class="campo"><label>≥15s</label><input type="number" id="de-m-15" min="0" style="min-width:90px;width:90px"></div>
@@ -315,7 +317,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         <div class="arquivos-lista" id="lista-de-manual"></div></div>
     </div>
     <div class="linha-config">
-      <div class="campo"><label>Data (aparece na imagem)</label><input type="date" id="de-data"></div>
+      <div class="campo"><label>Dia do relatório</label><select id="de-dia"><option value="todos">Todos os dias (período)</option></select></div>
       <button class="btn" id="btn-de-gerar" disabled>⚙️ Calcular desempenho</button>
       <button class="btn sec" id="btn-de-excel" style="display:none">⬇️ Baixar Excel</button>
       <button class="btn sec" id="btn-de-img" style="display:none">🖼️ Baixar Imagem</button>
@@ -328,10 +330,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <!-- ============ CONVERSÃO PÓS-CONTATO ============ -->
   <section class="pagina" id="pg-conversao">
     <h1>🎯 Conversão Pós-Contato</h1>
-    <p class="sub">Envie o CSV das ligações do dia (clientes que você falou, com a qualificação) e o CSV de pagos. O cruzamento é feito por <b>CPF</b> e mostra quem pagou <b>no dia do contato ou depois</b> (conversão), quem já tinha pago antes e quem ainda não pagou — com taxa de conversão, valor recuperado e resultado por qualificação.</p>
+    <p class="sub">Envie o CSV das ligações do dia (clientes que você falou, com a qualificação), o CSV do chat (opcional — sem tempo de fala, todo CPF conversado conta) e o CSV de pagos. O cruzamento é feito por <b>CPF</b> e mostra quem pagou <b>no dia do contato ou depois</b> (conversão), quem já tinha pago antes e quem ainda não pagou — com taxa de conversão, valor recuperado e resultado por qualificação.</p>
     <div class="grid2">
       <div class="card"><h3>📞 CSV de Ligações do Dia (3C+)</h3><div class="dica">Colunas: agent_name, qualification_name, identifier (CPF), call_date, speaking_with_agent_time.</div>
         <label class="drop" id="drop-cv-lig">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-cv-lig"></label></div>
+      <div class="card"><h3>💬 CSV do Chat <span class="opcional">opcional</span></h3><div class="dica">Conversas do chat com CPF (e data, se tiver). O chat não tem tempo de fala — todo CPF conversado conta como contato e cruza com os pagos: pagou no dia ou após.</div>
+        <label class="drop" id="drop-cv-chat">Clique ou arraste o CSV aqui<input type="file" accept=".csv" id="file-cv-chat"></label></div>
       <div class="card"><h3>💰 CSV/Excel de Pagos</h3><div class="dica">Planilha de pagos com cpf, valorapagar e dtpagamento (aceita a versão limpa ou a leve).</div>
         <label class="drop" id="drop-cv-pagos">Clique ou arraste o arquivo aqui<input type="file" accept=".csv,.xlsx,.xls" id="file-cv-pagos"></label></div>
     </div>
@@ -766,15 +770,15 @@ setupDrop('drop-an-lig','file-an-lig', async files=>{
   anLig = await lerCSV(files[0]);
   const drop = document.getElementById('drop-an-lig');
   drop.classList.add('ok'); drop.firstChild.textContent = '✅ '+files[0].name+' ('+anLig.length+' ligações)';
-  // preenche data a partir do CSV
+  // detecta todos os dias do CSV e popula o seletor
   const headers = Object.keys(anLig[0]||{});
-  const cData = achaCol(headers,['call_date','data','date']);
-  if(cData){
-    const cont = {};
-    for(const r of anLig){ const d = parseData(r[cData]); if(d){ const k = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); cont[k]=(cont[k]||0)+1; } }
-    const top = Object.entries(cont).sort((a,b)=>b[1]-a[1])[0];
-    if(top) document.getElementById('an-data').value = top[0];
-  }
+  anDataCol = achaCol(headers,['call_date','data','date']);
+  const cont = {};
+  if(anDataCol) for(const r of anLig){ const d = parseData(r[anDataCol]); if(d){ const k = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); cont[k]=(cont[k]||0)+1; } }
+  const dias = Object.keys(cont).sort((a,b)=>a.split('/').reverse().join('')<b.split('/').reverse().join('')?-1:1);
+  const sel = document.getElementById('an-data');
+  sel.innerHTML = dias.length ? dias.map(k=>`<option value="${k}">${k} (${cont[k]} lig.)</option>`).join('') : '<option value="">—</option>';
+  if(dias.length) sel.value = dias[dias.length-1]; // padrão: dia mais recente
   anAtualizaBotao();
 });
 function removeProd(i){ anProds.splice(i,1); renderLista('lista-an-prod',anProds,removeProd); if(!anProds.length) document.getElementById('drop-an-prod').classList.remove('ok'); anAtualizaBotao(); }
@@ -801,9 +805,16 @@ document.getElementById('btn-an-gerar').addEventListener('click', ()=>{
   catch(e){ msg('an-msg','erro','❌ Erro ao processar: '+e.message); console.error(e); }
 });
 
+let anDataCol=null;
 function processaAnalise(){
   if(!xlsxPronto()) return;
   limpaMsg('an-msg');
+  const diaSel = document.getElementById('an-data').value;
+  let ligDoDia = anLig;
+  if(diaSel && anDataCol){
+    ligDoDia = anLig.filter(r=>{ const d=parseData(r[anDataCol]); return d && (String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'))===diaSel; });
+    if(!ligDoDia.length) throw new Error('Nenhuma ligação no dia '+diaSel+'.');
+  }
   const hL = Object.keys(anLig[0]||{});
   const cAgente = achaCol(hL,['agent_name','agente','agent']);
   const cCamp   = achaCol(hL,['campaign_name','campanha','campaign']);
@@ -820,7 +831,7 @@ function processaAnalise(){
     if(!ag[nome]) ag[nome]={nome, total:0, m15:0, nq:0, idVazio:0, campanhas:{}, manualLigSeg:0, tpaSeg:0, intervaloSeg:0, pausaProdSeg:0, temPausa:false, temProd:false};
     return ag[nome];
   }
-  for(const r of anLig){
+  for(const r of ligDoDia){
     const nome = String(r[cAgente]||'').trim();
     if(!nome) continue;
     const a = pega(nome);
@@ -989,15 +1000,15 @@ function processaAnalise(){
     <div class="card"><h3>📝 Resumo textual (sem nomes) — copie e cole</h3>
     <pre style="white-space:pre-wrap;font-size:12.5px;color:var(--texto2);line-height:1.7;margin-top:8px">${resumoTexto('iGreen',igreen)}\n\n${resumoTexto('Meet Call',meet)}</pre></div>`;
 
-  msg('an-msg','ok', `✅ Arquivos gerados: <b>Analise_Times_${dataStr}.xlsx</b> e <b>Analise_MeetCall_${dataStr}.xlsx</b> · ${agentes.length} colaboradores processados`+
+  msg('an-msg','ok', `✅ Dia <b>${diaSel||'—'}</b> (${ligDoDia.length} ligações): <b>Analise_Times_${dataStr}.xlsx</b> e <b>Analise_MeetCall_${dataStr}.xlsx</b> · ${agentes.length} colaboradores`+
     (anPausas.length? ' · intervalo líquido aplicado a quem tem CSV de pausa':' · sem CSVs de pausa (intervalo bruto)'));
 }
 
 /* ================================================================
    2) DESEMPENHO POR AGENTE (CSV de ligações + dados manuais do chat)
    ================================================================ */
-let deLig=null, deManuais=[], deDados=null;
-function deAtualizaBotao(){ document.getElementById('btn-de-gerar').disabled = !(deLig || deManuais.length); }
+let deLig=null, deChat=null, deManuais=[], deDados=null;
+function deAtualizaBotao(){ document.getElementById('btn-de-gerar').disabled = !(deLig || deChat || deManuais.length); }
 function deRenderManuais(){
   const el = document.getElementById('lista-de-manual');
   el.innerHTML = deManuais.map((m,i)=>`<div><span>💬 ${m.nome} — ${m.m15} ≥15s de ${m.total}</span><span class="x" data-i="${i}">✕</span></div>`).join('');
@@ -1006,35 +1017,85 @@ function deRenderManuais(){
 document.getElementById('btn-de-m-add').addEventListener('click',()=>{
   const nome = document.getElementById('de-m-nome').value.trim();
   const m15  = parseInt(document.getElementById('de-m-15').value)||0;
-  const total= parseInt(document.getElementById('de-m-total').value)||0;
+  const totalCampo = document.getElementById('de-m-total').value.trim();
+  // no chat, o total geral PODE ser menor que os ≥15s; se ficar em branco, usa o mesmo valor dos ≥15s
+  const total = totalCampo==='' ? m15 : (parseInt(totalCampo)||0);
   if(!nome){ msg('de-msg','erro','❌ Informe o nome do agente.'); return; }
-  if(total<m15){ msg('de-msg','erro','❌ O total geral não pode ser menor que os ≥15s.'); return; }
   limpaMsg('de-msg');
   deManuais.push({nome, m15, total});
   ['de-m-nome','de-m-15','de-m-total'].forEach(id=>document.getElementById(id).value='');
   deRenderManuais(); deAtualizaBotao();
   document.getElementById('de-m-nome').focus();
 });
+let deDataCol=null;
+function deDiaKey(v){ const d=parseData(v); return d? String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear() : null; }
 setupDrop('drop-de-lig','file-de-lig', async files=>{
   deLig = await lerCSV(files[0]);
-  const d=document.getElementById('drop-de-lig'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+deLig.length+' ligações)';
+  const d=document.getElementById('drop-de-lig'); d.classList.add('ok');
+  // detecta os dias presentes no CSV
+  const hh=Object.keys(deLig[0]||{});
+  deDataCol = achaCol(hh,['call_date','data','date']);
+  const dias={};
+  if(deDataCol) for(const r of deLig){ const k=deDiaKey(r[deDataCol]); if(k) dias[k]=(dias[k]||0)+1; }
+  const lista=Object.keys(dias).sort((a,b)=>a.split('/').reverse().join('')<b.split('/').reverse().join('')?-1:1);
+  const sel=document.getElementById('de-dia');
+  sel.innerHTML='<option value="todos">Todos os dias (período)</option>'+lista.map(k=>`<option value="${k}">${k} (${dias[k]} lig.)</option>`).join('');
+  if(lista.length===1) sel.value=lista[0];
+  d.firstChild.textContent='✅ '+files[0].name+' ('+deLig.length+' ligações · '+(lista.length||1)+' dia'+(lista.length>1?'s':'')+')';
   deAtualizaBotao();
 });
+setupDrop('drop-de-chat','file-de-chat', async files=>{
+  deChat = await lerCSV(files[0]);
+  const d=document.getElementById('drop-de-chat'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+deChat.length+' linhas)';
+  deAtualizaBotao();
+});
+function deProcessaChat(ag, diaSel){
+  if(!deChat) return 0;
+  const h=Object.keys(deChat[0]||{});
+  const cAg=achaCol(h,['agent_name','agente','atendente','operador','responsavel','nome','agent']);
+  if(!cAg) throw new Error('CSV de chat sem coluna de agente (agente/atendente/operador/nome).');
+  const cRes=achaCol(h,['resolvidos','resolvido','resolved','resolvidas']);
+  const cBack=achaCol(h,['backlog','backlogs','em aberto','abertos','aberto','pendentes','pendente']);
+  const cStatus=achaCol(h,['status','situacao','estado','qualification_name']);
+  const cData=achaCol(h,['call_date','data','date','criado','created','dia']);
+  let usadas=0;
+  for(const r of deChat){
+    if(diaSel && diaSel!=='todos' && cData){ const k=deDiaKey(r[cData]); if(k && k!==diaSel) continue; }
+    const nome=String(r[cAg]||'').trim(); if(!nome) continue;
+    const a = ag[nome]=ag[nome]||{nome,total:0,m15:0,origem:'💬 Chat'};
+    if(!a.origem.includes('💬')) a.origem='📞+💬';
+    if(cRes||cBack){ // formato agregado por agente
+      const res=parseInt(String(r[cRes?cRes:'']||'').replace(/\D/g,''))||0;
+      const back=parseInt(String(r[cBack?cBack:'']||'').replace(/\D/g,''))||0;
+      a.m15+=res; a.total+=res+back; usadas++;
+    } else if(cStatus){ // uma conversa por linha
+      const st=norm(r[cStatus]);
+      a.total++;
+      if(/resolv|fechad|finaliz|conclu|encerrad/.test(st)) a.m15++;
+      usadas++;
+    } else throw new Error('CSV de chat sem colunas reconhecíveis: use resolvidos/backlog por agente OU uma coluna de status por conversa.');
+  }
+  return usadas;
+}
 document.getElementById('btn-de-gerar').addEventListener('click',()=>{
   try{
     limpaMsg('de-msg');
     const ag={};
+    const diaSel = document.getElementById('de-dia').value;
+    let ligDia = deLig||[];
+    if(deLig && diaSel!=='todos' && deDataCol) ligDia = deLig.filter(r=>deDiaKey(r[deDataCol])===diaSel);
     if(deLig){
       const h = Object.keys(deLig[0]||{});
       const cAg=achaCol(h,['agent_name','agente']), cFala=achaCol(h,['speaking_with_agent_time','speaking']);
       if(!cAg) throw new Error('CSV sem coluna agent_name.');
-      for(const r of deLig){
+      for(const r of ligDia){
         const n=String(r[cAg]||'').trim(); if(!n) continue;
         const a = ag[n]=ag[n]||{nome:n,total:0,m15:0,origem:'📞 Ligações'};
         a.total++;
         if(parseDur(cFala?r[cFala]:0)>=15) a.m15++;
       }
     }
+    const chatLinhas = deProcessaChat(ag, diaSel);
     for(const m of deManuais){
       if(ag[m.nome]){ ag[m.nome].total+=m.total; ag[m.nome].m15+=m.m15; ag[m.nome].origem='📞+💬'; }
       else ag[m.nome]={nome:m.nome,total:m.total,m15:m.m15,origem:'💬 Chat (manual)'};
@@ -1053,12 +1114,13 @@ document.getElementById('btn-de-gerar').addEventListener('click',()=>{
     document.getElementById('de-tabela').innerHTML=html+'</table></div>';
     document.getElementById('btn-de-excel').style.display='inline-block';
     document.getElementById('btn-de-img').style.display='inline-block';
-    msg('de-msg','ok','✅ Desempenho calculado para '+deDados.length+' agentes ('+(deLig?deLig.length+' ligações do CSV':'sem CSV')+(deManuais.length?' + '+deManuais.length+' do chat manual':'')+').');
+    msg('de-msg','ok','✅ Desempenho de <b>'+(diaSel==='todos'?'todo o período':diaSel)+'</b>: '+deDados.length+' agentes ('+(deLig?ligDia.length+' ligações':'sem CSV de ligações')+(deChat?' + '+chatLinhas+' linhas do chat (resolvidos→≥15s, backlog→Geral)':'')+(deManuais.length?' + '+deManuais.length+' do chat manual':'')+').');
   }catch(e){ msg('de-msg','erro','❌ '+e.message); }
 });
 document.getElementById('btn-de-excel').addEventListener('click',()=>{
   if(!xlsxPronto()) return;
-  const dados=[[CREDITO],['📈 Desempenho dos Colaboradores'],
+  const rot = deRotuloDia();
+  const dados=[[CREDITO],['📈 Desempenho dos Colaboradores — '+rot.label],
     ['ℹ️ Diferença = Geral menos ≥15s. Até 30 é normal 🟢 · 31 a 50 requer atenção 🟡 · acima de 50 precisa ser analisado 🔴. Agentes 📞 vêm do CSV do 3C+; 💬 foram preenchidos manualmente (chat). Ordenado por ≥15s.'],
     [],['#','Agente','Origem','≥15s','Geral','Diferença']];
   deDados.forEach((a,i)=>dados.push([i+1+'º',a.nome,a.origem,a.m15,a.total, (a.dif>50?'🔴 ':a.dif>30?'🟡 ':'🟢 ')+a.dif]));
@@ -1066,16 +1128,24 @@ document.getElementById('btn-de-excel').addEventListener('click',()=>{
   dados.push(['','TOTAL DA EQUIPE','',tot15,tot,(tot-tot15)]);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, abaBonita(dados,[5,28,18,12,12,12],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Desempenho');
-  const hoje=new Date();
-  baixaXLSX(wb,'Desempenho_iGreen_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx');
+  baixaXLSX(wb,'Desempenho_iGreen_'+rot.arq+'.xlsx');
 });
 
+function deRotuloDia(){
+  const sel=document.getElementById('de-dia');
+  if(sel.value!=='todos') return {label:sel.value, arq:sel.value.slice(0,5).replace('/','-')};
+  const dias=[...sel.options].map(o=>o.value).filter(v=>v!=='todos');
+  if(dias.length>1) return {label:dias[0].slice(0,5)+' – '+dias[dias.length-1], arq:'Periodo'};
+  if(dias.length===1) return {label:dias[0], arq:dias[0].slice(0,5).replace('/','-')};
+  const hj=new Date();
+  const l=String(hj.getDate()).padStart(2,'0')+'/'+String(hj.getMonth()+1).padStart(2,'0')+'/'+hj.getFullYear();
+  return {label:l, arq:l.slice(0,5).replace('/','-')};
+}
 document.getElementById('btn-de-img').addEventListener('click',deExportaImagem);
 function deExportaImagem(){
   if(!deDados||!deDados.length) return;
-  const dataISO = document.getElementById('de-data').value || new Date().toISOString().slice(0,10);
-  const [aa,mm,dd] = dataISO.split('-');
-  const dataBR = dd+'/'+mm+'/'+aa;
+  const rot = deRotuloDia();
+  const dataBR = rot.label;
   const W=800, rowH=38, headH=118, totH=48, footH=66;
   const H=headH + deDados.length*rowH + totH + footH;
   const cv=document.createElement('canvas'); cv.width=W*2; cv.height=H*2;
@@ -1104,8 +1174,10 @@ function deExportaImagem(){
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   ctx.fillStyle='#2DBD6E'; ctx.font='700 12px '+F; ctx.fillText('⚡ iGREEN ENERGY',24,28);
   ctx.fillStyle='#FFFFFF'; ctx.font='700 20px '+F; ctx.fillText('Desempenho dos Colaboradores',24,54);
-  ctx.fillStyle='#123B28'; rrect(24,64,110,20,10); ctx.fill();
-  ctx.fillStyle='#8FE3B4'; ctx.font='600 11px '+F; ctx.fillText('📅 '+dataBR,32,78);
+  ctx.font='600 11px '+F;
+  const wData = ctx.measureText('📅 '+dataBR).width+18;
+  ctx.fillStyle='#123B28'; rrect(24,64,wData,20,10); ctx.fill();
+  ctx.fillStyle='#8FE3B4'; ctx.fillText('📅 '+dataBR,32,78);
   // colunas
   const X15=470, XG=590, XD=712;
   ctx.fillStyle='#2DBD6E'; ctx.font='700 10px '+F;
@@ -1147,17 +1219,16 @@ function deExportaImagem(){
   cv.toBlob(b=>{
     const a=document.createElement('a');
     a.href=URL.createObjectURL(b);
-    a.download='Desempenho_'+dd+'-'+mm+'.png';
+    a.download='Desempenho_'+rot.arq+'.png';
     a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   },'image/png');
 }
-document.getElementById('de-data').value = new Date().toISOString().slice(0,10);
 
 /* ================================================================
    5) CONVERSÃO PÓS-CONTATO (ligações × pagos)
    ================================================================ */
-let cvLig=null, cvPagos=null, cvResultado=null, cvPorQual=null, cvResumo=null;
+let cvLig=null, cvChat=null, cvPagos=null, cvResultado=null, cvPorQual=null, cvResumo=null;
 function parseValorBR(v){
   if(v==null) return 0;
   let s=String(v).replace(/[R$\s]/g,'');
@@ -1168,7 +1239,7 @@ function parseValorBR(v){
 function fmtBRL(n){
   return 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
-function cvAtualizaBotao(){ document.getElementById('btn-cv-gerar').disabled = !(cvLig && cvPagos); }
+function cvAtualizaBotao(){ document.getElementById('btn-cv-gerar').disabled = !((cvLig||cvChat) && cvPagos); }
 setupDrop('drop-cv-lig','file-cv-lig', async files=>{
   cvLig = await lerCSV(files[0]);
   const d=document.getElementById('drop-cv-lig'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+cvLig.length+' ligações)';
@@ -1178,6 +1249,11 @@ setupDrop('drop-cv-lig','file-cv-lig', async files=>{
     const nomes=[...new Set(cvLig.map(r=>String(r[cAg]||'').trim()).filter(Boolean))].sort();
     document.getElementById('cv-agente').innerHTML='<option value="">Todos os agentes</option>'+nomes.map(n=>`<option>${n}</option>`).join('');
   }
+  cvAtualizaBotao();
+});
+setupDrop('drop-cv-chat','file-cv-chat', async files=>{
+  cvChat = await lerCSV(files[0]);
+  const d=document.getElementById('drop-cv-chat'); d.classList.add('ok'); d.firstChild.textContent='✅ '+files[0].name+' ('+cvChat.length+' conversas)';
   cvAtualizaBotao();
 });
 setupDrop('drop-cv-pagos','file-cv-pagos', async files=>{
@@ -1200,28 +1276,53 @@ function processaConversao(){
   const filtroAgente = document.getElementById('cv-agente').value;
 
   // ---- ligações: agrupa por CPF ----
-  const hL=Object.keys(cvLig[0]||{});
-  const cAg=achaCol(hL,['agent_name','agente']), cQual=achaCol(hL,['qualification_name','qualificacao']),
-        cIdent=achaCol(hL,['identifier','identificador','cpf']), cData=achaCol(hL,['call_date','data']),
-        cFala=achaCol(hL,['speaking_with_agent_time','speaking']);
-  if(!cIdent) throw new Error('CSV de ligações sem coluna identifier (CPF).');
-  const contatos={}; let ligSemCpf=0, ligDescartadas=0;
-  for(const r of cvLig){
-    if(filtroAgente && String(r[cAg]||'').trim()!==filtroAgente) continue;
-    const fala=parseDur(cFala?r[cFala]:0);
-    if(fala<minSeg){ ligDescartadas++; continue; }
-    const cpf=soDigitos(r[cIdent]);
-    if(!cpf){ ligSemCpf++; continue; }
-    const c = contatos[cpf]=contatos[cpf]||{cpf, contatos:0, qual:'', dataContato:null, agente:''};
-    c.contatos++;
-    const q=String(cQual?r[cQual]:'').trim();
-    if(q) c.qual=q; // guarda a última qualificação não vazia
-    if(cAg && !c.agente) c.agente=String(r[cAg]||'').trim();
-    const d=parseData(cData?r[cData]:null);
-    if(d && (!c.dataContato || d<c.dataContato)) c.dataContato=d; // primeiro contato
+  const contatos={}; let ligSemCpf=0, ligDescartadas=0, chatContatos=0, chatSemAgente=false;
+  if(cvLig){
+    const hL=Object.keys(cvLig[0]||{});
+    const cAg=achaCol(hL,['agent_name','agente']), cQual=achaCol(hL,['qualification_name','qualificacao']),
+          cIdent=achaCol(hL,['identifier','identificador','cpf']), cData=achaCol(hL,['call_date','data']),
+          cFala=achaCol(hL,['speaking_with_agent_time','speaking']);
+    if(!cIdent) throw new Error('CSV de ligações sem coluna identifier (CPF).');
+    for(const r of cvLig){
+      if(filtroAgente && String(r[cAg]||'').trim()!==filtroAgente) continue;
+      const fala=parseDur(cFala?r[cFala]:0);
+      if(fala<minSeg){ ligDescartadas++; continue; }
+      const cpf=soDigitos(r[cIdent]);
+      if(!cpf){ ligSemCpf++; continue; }
+      const c = contatos[cpf]=contatos[cpf]||{cpf, contatos:0, qual:'', dataContato:null, agente:'', canal:'📞'};
+      c.contatos++;
+      if(!c.canal.includes('📞')) c.canal='📞+💬';
+      const q=String(cQual?r[cQual]:'').trim();
+      if(q) c.qual=q; // guarda a última qualificação não vazia
+      if(cAg && !c.agente) c.agente=String(r[cAg]||'').trim();
+      const d=parseData(cData?r[cData]:null);
+      if(d && (!c.dataContato || d<c.dataContato)) c.dataContato=d; // primeiro contato
+    }
+  }
+  // ---- chat: sem tempo de fala — todo CPF conversado conta ----
+  if(cvChat){
+    const hC=Object.keys(cvChat[0]||{});
+    const cCpfC=achaCol(hC,['cpf','identifier','identificador','documento']);
+    if(!cCpfC) throw new Error('CSV do chat sem coluna de CPF.');
+    const cAgC=achaCol(hC,['agent_name','agente','atendente','operador','responsavel']);
+    const cQualC=achaCol(hC,['qualification_name','qualificacao','assunto','status','situacao']);
+    const cDataC=achaCol(hC,['call_date','data','date','criado','created','dia']);
+    if(filtroAgente && !cAgC) chatSemAgente=true;
+    for(const r of cvChat){
+      if(filtroAgente){ if(!cAgC) continue; if(String(r[cAgC]||'').trim()!==filtroAgente) continue; }
+      const cpf=soDigitos(r[cCpfC]); if(!cpf) continue;
+      const c = contatos[cpf]=contatos[cpf]||{cpf, contatos:0, qual:'', dataContato:null, agente:'', canal:'💬'};
+      c.contatos++; chatContatos++;
+      if(!c.canal.includes('💬')) c.canal='📞+💬';
+      const q=String(cQualC?r[cQualC]:'').trim();
+      if(q) c.qual=q; else if(!c.qual) c.qual='💬 Chat';
+      if(cAgC && !c.agente) c.agente=String(r[cAgC]||'').trim();
+      const d=parseData(cDataC?r[cDataC]:null);
+      if(d && (!c.dataContato || d<c.dataContato)) c.dataContato=d;
+    }
   }
   const cpfsContato=Object.keys(contatos);
-  if(!cpfsContato.length) throw new Error('Nenhum cliente com CPF nas ligações após os filtros.');
+  if(!cpfsContato.length) throw new Error('Nenhum cliente com CPF nos contatos (ligações/chat) após os filtros.');
 
   // ---- pagos: agrupa por CPF ----
   const hP=Object.keys(cvPagos[0]||{});
@@ -1260,7 +1361,7 @@ function processaConversao(){
         dataPgto=pagos.reduce((m,p)=>!m||(p.data&&p.data<m)?p.data:m,null);
       }
     } else { status='🔴 Não pagou'; nNao++; }
-    linhas.push({cliente,cpf:fmtCPF(cpf),qual:c.qual||'(sem qualificação)',agente:c.agente,contatos:c.contatos,
+    linhas.push({cliente,cpf:fmtCPF(cpf),qual:c.qual||'(sem qualificação)',canal:c.canal||'📞',agente:c.agente,contatos:c.contatos,
       dataContato:c.dataContato?fmtDataBR(c.dataContato):'—',status,
       dataPgto:dataPgto?fmtDataBR(dataPgto):'—',dias:dias!=null?dias:'—',valor});
   }
@@ -1295,15 +1396,15 @@ function processaConversao(){
     hq+=`<tr><td>${q.qual}</td><td class="num">${q.contatados}</td><td class="num">${q.pagaram}</td><td class="num">${(q.contatados?q.pagaram/q.contatados*100:0).toFixed(1).replace('.',',')}%</td><td class="num">${fmtBRL(q.valor)}</td></tr>`;
   });
   document.getElementById('cv-qual').innerHTML=hq+'</table></div></div>';
-  let ht='<div class="tabela-wrap"><table><tr><th>Cliente</th><th>CPF</th><th>Qualificação</th><th>Contatos</th><th>Data Contato</th><th>Status</th><th>Data Pgto</th><th>Dias até pagar</th><th>Valor</th></tr>';
+  let ht='<div class="tabela-wrap"><table><tr><th>Cliente</th><th>CPF</th><th>Canal</th><th>Qualificação</th><th>Contatos</th><th>Data Contato</th><th>Status</th><th>Data Pgto</th><th>Dias até pagar</th><th>Valor</th></tr>';
   linhas.slice(0,150).forEach(l=>{
     const chip=l.status.startsWith('🟢')?'verde':l.status.startsWith('🔴')?'vermelho':'cinza';
-    ht+=`<tr><td>${l.cliente||'—'}</td><td>${l.cpf}</td><td>${l.qual}</td><td class="num">${l.contatos}</td><td>${l.dataContato}</td><td><span class="chip ${chip}">${l.status}</span></td><td>${l.dataPgto}</td><td class="num">${l.dias}</td><td class="num">${l.valor?fmtBRL(l.valor):'—'}</td></tr>`;
+    ht+=`<tr><td>${l.cliente||'—'}</td><td>${l.cpf}</td><td>${l.canal}</td><td>${l.qual}</td><td class="num">${l.contatos}</td><td>${l.dataContato}</td><td><span class="chip ${chip}">${l.status}</span></td><td>${l.dataPgto}</td><td class="num">${l.dias}</td><td class="num">${l.valor?fmtBRL(l.valor):'—'}</td></tr>`;
   });
   ht+='</table></div>'+(linhas.length>150?`<p class="sub" style="margin-top:8px">Mostrando 150 de ${linhas.length} — o Excel contém todos.</p>`:'');
   document.getElementById('cv-tabela').innerHTML=ht;
   document.getElementById('btn-cv-excel').style.display='inline-block';
-  msg('cv-msg','ok',`✅ Cruzamento concluído: ${total} clientes contatados${minSeg?` (fala ≥${minSeg}s)`:''}${filtroAgente?` · agente: ${filtroAgente}`:''} · ${nApos} pagaram no dia do contato ou após (${taxa.toFixed(1).replace('.',',')}%) · ${fmtBRL(valorApos)} recuperados.`+(ligSemCpf?` · ${ligSemCpf} ligações sem CPF ignoradas`:''));
+  msg('cv-msg','ok',`✅ Cruzamento concluído: ${total} clientes contatados${minSeg?` (fala ≥${minSeg}s)`:''}${filtroAgente?` · agente: ${filtroAgente}`:''} · ${nApos} pagaram no dia do contato ou após (${taxa.toFixed(1).replace('.',',')}%) · ${fmtBRL(valorApos)} recuperados.`+(chatContatos?` · ${chatContatos} contatos via 💬 chat`:'')+(ligSemCpf?` · ${ligSemCpf} ligações sem CPF ignoradas`:'')+(chatSemAgente?' · ⚠️ chat ignorado no filtro por agente (CSV do chat sem coluna de agente)':''));
 }
 document.getElementById('btn-cv-excel').addEventListener('click',()=>{
   const r=cvResumo;
@@ -1320,12 +1421,12 @@ document.getElementById('btn-cv-excel').addEventListener('click',()=>{
     ['Qualificação','Contatados','Pagaram (dia ou após)','% Conversão','Valor Recuperado']];
   cvPorQual.forEach(q=>resumo.push([q.qual,q.contatados,q.pagaram,(q.contatados?q.pagaram/q.contatados*100:0).toFixed(1).replace('.',',')+'%',fmtBRL(q.valor)]));
   const clientes=[[CREDITO],['🎯 Conversão Pós-Contato — Clientes'],
-    ['ℹ️ Cruzamento por CPF entre as ligações do dia e a base de pagos. 🟢 Pagou no dia ou após = pagamento na MESMA data do 1º contato ou depois (conta como conversão) · 🔵 Pagou antes = já tinha pago antes do contato · 🔴 Não pagou.'],
-    [],['Cliente','CPF','Qualificação','Agente','Contatos','Data Contato','Status','Data Pagamento','Dias até pagar','Valor Pago']];
-  cvResultado.forEach(l=>clientes.push([l.cliente,l.cpf,l.qual,l.agente,l.contatos,l.dataContato,l.status,l.dataPgto,l.dias,l.valor?fmtBRL(l.valor):'']));
+    ['ℹ️ Cruzamento por CPF entre os contatos (📞 ligações e 💬 chat, que não tem tempo de fala) e a base de pagos. 🟢 Pagou no dia ou após = pagamento na MESMA data do 1º contato ou depois (conta como conversão) · 🔵 Pagou antes = já tinha pago antes do contato · 🔴 Não pagou.'],
+    [],['Cliente','CPF','Canal','Qualificação','Agente','Contatos','Data Contato','Status','Data Pagamento','Dias até pagar','Valor Pago']];
+  cvResultado.forEach(l=>clientes.push([l.cliente,l.cpf,l.canal||'📞',l.qual,l.agente,l.contatos,l.dataContato,l.status,l.dataPgto,l.dias,l.valor?fmtBRL(l.valor):'']));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, abaBonita(resumo,[32,16,15,13,18],{titleRow:2,headerRows:[12,13],dataStart:3,zebra:false}),'Resumo');
-  XLSX.utils.book_append_sheet(wb, abaBonita(clientes,[30,17,26,24,10,13,24,15,13,14],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Clientes');
+  XLSX.utils.book_append_sheet(wb, abaBonita(clientes,[30,17,9,24,22,10,13,22,15,13,14],{titleRow:1,explicRows:[2],headerRows:[4],dataStart:5}),'Clientes');
   const hoje=new Date();
   baixaXLSX(wb,'Conversao_PosContato_'+String(hoje.getDate()).padStart(2,'0')+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'.xlsx');
 });
