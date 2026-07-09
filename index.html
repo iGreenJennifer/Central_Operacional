@@ -1921,14 +1921,14 @@ const MEMBROS_TIME = {
   ],
   'Time Déborah': [
     'mikael dias','amanda eduarda','larissa barcelos','nicole amaral',
-    'sara rocha','isabelly araujo','silye paula'
+    'sara rocha','isabelly araujo','silye paula','sylie'
   ],
   'Time Tamires': [
     'rauane pereira','wynara dos reis','esteffany souza','andre gomes',
     'danilo rodrigues','wanessa cardoso','larisse garcia'
   ],
   'Meet Call': [
-    'aline cristine'
+    'aline cristine','thayna','renata','hannah'
     /* ✏️ complete aqui com os nomes do Meet Call */
   ]
 };
@@ -4280,7 +4280,7 @@ O registro é feito pelo Forms de Retenção e Unificação e o script de regist
 
 🔗 [Forms de Retenção/Unificação](https://forms.office.com/pages/responsepage.aspx?id=m6i72ldzyEmIQDJiFJTYOFoLnlwUBAtMp_oqdVs98ctUQ0tVUTY4TllHRzcxUFNXMkI5OFk3M1dNVi4u&route=shorturl)`},
 
-{id:"conta_unica",emoji:"🧾",titulo:"Conta única — regras e duplicidade",keywords:["conta unica","cemig","vencimento antecipado","duplicidade","ressarcimento","boleto duplicado","desmembrar"],
+{id:"conta_unica",emoji:"🧾",titulo:"Conta única — regras e duplicidade",keywords:["conta unica","cemig","vencimento antecipado","duplicidade","ressarcimento","boleto duplicado","desmembrar","bahia","coelba","minas gerais","pernambuco","neoenergia","mato grosso do sul","energisa","goias","equatorial","rio grande do norte","cosern","ceara","enel","sao paulo","cpfl"],
 resposta:`Ao ofertar CONTA ÚNICA, passe as informações corretas:
 
 ✅ O cliente NÃO pode ter débito em conta. Caso tenha, deve retirar.
@@ -4292,7 +4292,12 @@ O setor de relacionamento faz um disparo para as solicitações de conta única 
 💡 Pagamento em duplicidade (pagou nosso boleto conta única E o da CEMIG):
 A CEMIG ressarce o valor nas próximas faturas.
 Ex.: duplicidade no mês 06 e boleto conta única do mês 07 já gerado → não precisa desmembrar o mês 07; o ressarcimento ocorre no mês 08.
-Ex. de valores: pagou R$ 50 da distribuidora a mais no mês 6 → no mês 7 a parte da distribuidora que seria R$ 60 vem R$ 10.`},
+Ex. de valores: pagou R$ 50 da distribuidora a mais no mês 6 → no mês 7 a parte da distribuidora que seria R$ 60 vem R$ 10.
+
+📍 Disponibilidade de conta única por estado/fornecedora (grupo COMERC):
+✅ Cemig MG (Minas Gerais) — única fornecedora com conta única (opcional)
+❌ Energisa MS (Mato Grosso do Sul), Neoenergia PE (Pernambuco), Cosern RN (Rio Grande do Norte), Enel CE (Ceará), Coelba BA (Bahia) — trabalham só com 2 boletos fixos, sem conta única
+⚠️ CPFL Paulista (SP) e Equatorial GO (Goiás) — fornecedoras paralisadas, não se aplica`},
 
 {id:"experip",emoji:"📲",titulo:"ExperIP — cliente ligando pra central",keywords:["experip","central","receptivo","cliente ligar","whatsapp ligacao","icone telefone","0800"],
 resposta:`Procedimento para o cliente ligar para nossa CENTRAL:
@@ -4561,7 +4566,7 @@ resposta:`A InCredi é a plataforma para consultar dívidas vencidas enviadas pa
 • (21) 99132-4220
 • daniele.garcia@incredi.com.br`},
 
-{id:"regras_estados",emoji:"📊",titulo:"Regras de estados — por fornecedora",protegido:true,keywords:["regras de estados","regra de estados","regra por estado","comerc","cemig","minas gerais","energisa","mato grosso do sul","neoenergia","pernambuco","cpfl","sao paulo","equatorial","goias","cosern","rio grande do norte","enel","ceara","coelba","bahia","conta unica por estado","conta unica bahia","conta unica cemig","kwh minimo","desconto","injecao","cancelamento","comissao","cashback"],
+{id:"regras_estados",emoji:"📊",titulo:"Regras de estados — por fornecedora",protegido:true,keywords:["regras de estados","regra de estados","regra por estado","comerc","cemig","minas gerais","energisa","mato grosso do sul","neoenergia","pernambuco","cpfl","sao paulo","equatorial","goias","cosern","rio grande do norte","enel","ceara","coelba","bahia","kwh minimo","desconto","injecao","cancelamento","comissao","cashback"],
 resposta:`📊 REGRAS DE ESTADOS — grupo COMERC
 🔒 Conteúdo restrito — mesma senha do link de Regras de estados.
 
@@ -4995,8 +5000,11 @@ function extrairTrechoRelevante(resposta, qNorm){
 /* pergunta mencionando um estado/fornecedora específico (fora Cemig) prioriza direto a base de Regras de estados,
    evitando disputa de pontos com tópicos genéricos como "Conta única" */
 function ehConsultaRegraPorEstado(q){
-  const termos = ['bahia','coelba','minas gerais','pernambuco','neoenergia','mato grosso do sul','goias','equatorial',
-    'rio grande do norte','cosern','ceara','sao paulo','cpfl paulista','regras de estados','regra de estados','regra por estado'];
+  /* só força a rota protegida (planilha completa: kwh mínimo, desconto, comissão, cashback etc.)
+     quando a pergunta cita explicitamente "regra(s) de estado(s)" — citar só o nome do estado/
+     fornecedora (ex.: "Bahia", "conta única") NÃO deve exigir senha; isso cai na busca normal,
+     que já tem tópicos abertos (como "Conta única") com a info específica de cada fornecedora. */
+  const termos = ['regras de estados','regra de estados','regra por estado','regras por estado','planilha de estados','planilha estados'];
   return termos.some(t=>q.includes(norm(t)));
 }
 
