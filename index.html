@@ -118,6 +118,10 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* início */
 .home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:8px}
+.trein-secao-titulo{grid-column:1/-1;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--verde-claro);margin-top:14px;padding-bottom:4px;border-bottom:1px solid var(--borda)}
+.trein-secao-titulo:first-child{margin-top:0}
+a.home-card{text-decoration:none;color:inherit;display:block}
+.trein-card.trein-oculto{display:none}
 .home-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:20px;cursor:pointer;transition:.2s}
 .home-card:hover{border-color:var(--verde);transform:translateY(-3px);box-shadow:0 8px 26px rgba(45,189,110,.18)}
 .home-card .ico{font-size:26px;margin-bottom:10px}
@@ -1115,6 +1119,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <div class="home-card" data-pg="gerador"><div class="ico">📞</div><b>Ligação Energizados</b><p>Base iVolt → listas de ligação (Base Total, 1 Boleto, Base Menor, BA/PE), remoção de tabulações via 3C+ e exportação no padrão POP.</p></div>
       <div class="home-card" data-pg="monitoria"><div class="ico">📋</div><b>Manual de Monitoria — 3C Plus</b><p>Guia passo a passo de como fazer monitoria: acessar o 3C+, critérios de avaliação, formulário manual, envio de e-mail e lançamento no iGreen Performance.</p></div>
       <div class="home-card" data-pg="simuladorapp"><div class="ico">📱</div><b>Simulador iGreen Club</b><p>Simulação do aplicativo do cliente, telinha por telinha — pra treinar e orientar o cliente na hora da ligação sem precisar do celular dele.</p></div>
+      <div class="home-card" data-pg="treinamentos"><div class="ico">🎓</div><b>Central de Treinamentos</b><p>Todos os PDFs de treinamento da equipe num só lugar, com busca — script, retenção, argumentação, BackOffice, DMC, 3C+ e mais.</p></div>
     </div>
   </section>
 
@@ -1478,6 +1483,43 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     </div>
   </section>
 
+  <!-- ============ CENTRAL DE TREINAMENTOS ============ -->
+  <section class="pagina" id="pg-treinamentos">
+    <button class="voltar" data-pg="home">← Voltar às ferramentas</button>
+    <h1>🎓 Central de Treinamentos <span class="tag">PDFs DA EQUIPE</span></h1>
+    <p class="sub">Todos os materiais de treinamento em PDF, num só lugar. Clique num card pra abrir o PDF em nova aba. Use a busca pra filtrar por nome, fornecedora ou tema.</p>
+
+    <input type="text" id="trein-busca" class="search-input" style="width:100%;max-width:520px;margin-bottom:18px" placeholder="🔍 Buscar treinamento (ex: retenção, 3C+, BackOffice, DMC...)" oninput="filtrarTreinamentos()">
+
+    <div id="trein-vazio" style="display:none;text-align:center;color:var(--texto2);padding:30px 0">Nenhum treinamento encontrado pra essa busca.</div>
+
+    <div class="home-grid" id="trein-grid">
+
+      <div class="trein-secao-titulo" data-secao="Atendimento e Script">📞 Atendimento e Script</div>
+      <a class="home-card trein-card" data-nome="script chat respostas prontas atendimento cauã eduarda" href="treinamentos/Script_Chat.pdf" target="_blank"><div class="ico">💬</div><b>Script Chat</b><p>Respostas prontas de atendimento via chat: abertura, boletos, cancelamento, parcelamento, INCREDI, conta única e encerramento.</p></a>
+
+      <div class="trein-secao-titulo" data-secao="Retenção e Argumentação">🤝 Retenção e Argumentação</div>
+      <a class="home-card trein-card" data-nome="tecnicas de retencao e recebimento debora jennifer argumentos objecao" href="treinamentos/Tecnicas_Retencao_Recebimento.pdf" target="_blank"><div class="ico">🛡️</div><b>Técnicas de Retenção e Recebimento</b><p>Como manter a calma, argumentar com o cliente, calcular desconto na fatura e contornar as principais objeções.</p></a>
+      <a class="home-card trein-card" data-nome="treinamento de argumentacao ivolt jennifer objecao desconto cancelamento" href="treinamentos/Treinamento_Argumentacao_iVolt.pdf" target="_blank"><div class="ico">🗣️</div><b>Treinamento de Argumentação — iVolt</b><p>Missão, valores da iGreen, o que é cobrança/inadimplência, pontos e argumentações prontas pra cada objeção do cliente.</p></a>
+      <a class="home-card trein-card" data-nome="abordagem de cobranca comerc script ligacao" href="treinamentos/Abordagem_Cobranca_COMERC.pdf" target="_blank"><div class="ico">☎️</div><b>Abordagem de Cobrança — COMERC</b><p>Modelo de abertura, meio e encerramento de ligação, particularidades (se recusa a pagar, sem previsão, cancelamento) e conta única.</p></a>
+      <a class="home-card trein-card" data-nome="abordagem parte 2 comerc numero alternativo historico" href="treinamentos/Abordagem_Parte_2_COMERC.pdf" target="_blank"><div class="ico">☎️</div><b>Abordagem — Parte 2 (COMERC)</b><p>Identificação do titular, tentativa de contato em número alternativo, uso do histórico e titular que não pode falar no momento.</p></a>
+      <a class="home-card trein-card" data-nome="abordagem parte 3 comerc leitura padrao energia aneel" href="treinamentos/Abordagem_Parte_3_COMERC.pdf" target="_blank"><div class="ico">☎️</div><b>Abordagem — Parte 3 (COMERC)</b><p>Argumentação sobre leitura do padrão de energia (base ANEEL/CDC), uso do histórico e cliente que finaliza o atendimento.</p></a>
+
+      <div class="trein-secao-titulo" data-secao="Sistemas — COMERC">💻 Sistemas — COMERC</div>
+      <a class="home-card trein-card" data-nome="treinamento backoffice energizados jennifer consultar disparar boleto" href="treinamentos/Treinamento_BackOffice.pdf" target="_blank"><div class="ico">🖥️</div><b>Treinamento BackOffice — Energizados</b><p>Acesso, consulta de dados do cliente, visualizar recebimentos e disparar boleto via WhatsApp/e-mail.</p></a>
+      <a class="home-card trein-card" data-nome="treinamento dmc bcff energizados comerc saldo fidelidade debito automatico" href="treinamentos/Treinamento_DMC_BCFF.pdf" target="_blank"><div class="ico">📊</div><b>Treinamento DMC e BCFF — Energizados</b><p>Login, consulta por instalação, diferencial do DMC, fidelidade, saldo, débito automático e parcelamento.</p></a>
+      <a class="home-card trein-card" data-nome="treinamento 3c plus comerc discadora qualificacao pausas" href="treinamentos/Treinamento_3CPlus_COMERC.pdf" target="_blank"><div class="ico">📞</div><b>Treinamento 3C+ — COMERC</b><p>BackOffice do discador, dados exibidos na ligação, classificação/tabulação, pausas e como encerrar o expediente.</p></a>
+
+      <div class="trein-secao-titulo" data-secao="Processos e POPs">📋 Processos e POPs</div>
+      <a class="home-card trein-card" data-nome="pop subida lista ligacao 3c plus procv meet call dias uteis jennifer" href="treinamentos/POP_Subida_Lista_Ligacao.pdf" target="_blank"><div class="ico">☎️</div><b>POP — Subida de Lista de Ligação</b><p>Regra de 3 ou 4 dias úteis pra puxar o relatório do 3C+, geração da lista na Central iGreen e cruzamento (PROCV) com a base Meet Call.</p></a>
+      <a class="home-card trein-card" data-nome="pop disparo boletos chatwoot personalizado template faixa dias jennifer" href="treinamentos/POP_Disparo_Boletos_Chatwoot.pdf" target="_blank"><div class="ico">📤</div><b>POP — Disparo de Boletos (Chatwoot)</b><p>Geração da base via aba Personalizado, cruzamento com Meet Call e disparos da semana, e escolha do template certo por faixa de dias vencidos.</p></a>
+      <a class="home-card trein-card" data-nome="pop gerador lista ligacao energizados html comerc thopen colunas regras tabulacoes" href="treinamentos/POP_Gerador_Lista_Energizados.pdf" target="_blank"><div class="ico">⚙️</div><b>POP — Gerador de Lista Energizados</b><p>Manual completo do Gerador HTML: como carregar as planilhas, filtros por aba, colunas exportadas, regras automáticas e tabulações bloqueantes do 3C+.</p></a>
+
+    </div>
+
+    <p style="margin-top:26px;font-size:12px;color:var(--texto2)">💡 Pra adicionar um novo treinamento aqui: salve o PDF na pasta <code>treinamentos/</code> (mesmo lugar do <code>index.html</code>) e peça pra Jennifer/Déborah incluir o card correspondente nesta seção.</p>
+  </section>
+
   <!-- ============ GUIA DE ATENDIMENTO ============ -->
   <section class="pagina" id="pg-guia">
     <button class="voltar" data-pg="home">← Voltar às ferramentas</button>
@@ -1711,6 +1753,27 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 /* ================================================================
    CENTRAL iGREEN — Desenvolvido por jennifer.silveira@igreenenergy.com.br
    ================================================================ */
+function filtrarTreinamentos(){
+  const termo = (document.getElementById('trein-busca').value || '').toLowerCase().trim();
+  const cards = document.querySelectorAll('.trein-card');
+  let algumVisivel = false;
+  cards.forEach(c=>{
+    const alvo = (c.dataset.nome || '') + ' ' + c.innerText.toLowerCase();
+    const bate = alvo.toLowerCase().includes(termo);
+    c.classList.toggle('trein-oculto', !bate);
+    if(bate) algumVisivel = true;
+  });
+  document.querySelectorAll('.trein-secao-titulo').forEach(t=>{
+    let el = t.nextElementSibling, temVisivel = false;
+    while(el && !el.classList.contains('trein-secao-titulo')){
+      if(el.classList.contains('trein-card') && !el.classList.contains('trein-oculto')) temVisivel = true;
+      el = el.nextElementSibling;
+    }
+    t.style.display = temVisivel ? '' : 'none';
+  });
+  document.getElementById('trein-vazio').style.display = algumVisivel ? 'none' : 'block';
+}
+
 const CREDITO = "Desenvolvido por jennifer.silveira@igreenenergy.com.br · iGreen Energy · 2026";
 
 /* ---------- Manual de Monitoria embutido (base64, sem depender de arquivo externo) ---------- */
